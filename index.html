@@ -48,6 +48,8 @@ button{font:inherit;color:inherit}
 .logo i::after{content:"";position:absolute;left:50%;bottom:-6px;width:12px;height:3px;margin-left:-6px;border-radius:2px;background:var(--accent);opacity:.6}
 .logo h1{margin:0;font:800 21px/1 var(--f-disp);font-stretch:72%;letter-spacing:.01em;text-transform:uppercase}
 .logo h1 span{color:var(--muted);font-weight:600}
+/* Sürüm etiketi: her yayında artırılır (v1.3, v1.4 …) */
+.ver{flex:none;font:500 11px/1 var(--f-mono);color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:3px 5px}
 .hbtns{display:flex;gap:6px}
 .hb{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)}
 .hb:hover{background:var(--sunk)}
@@ -222,7 +224,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.3</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
