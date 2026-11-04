@@ -227,7 +227,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.4</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.5</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -499,6 +499,13 @@ function isRow(x,withDate){
     <span><span class="t">${esc(x.tur||"İş")}${t?` · ${esc(t.sinif)}`:""}</span><br><span class="m">${hepsi()?esc(okulKisa(x.okul))+" — ":""}${esc(x.aciklama||"Açıklama yok")}</span></span>
     <span class="pill p-${esc(x.durum)}">${IS_DURUM[x.durum]||""}</span></button>`;
 }
+function doneTodoRow(x,withDate){
+  const t=tahtaById(x.tahta);const [,m,d]=(x.bitis||"--").split("-");
+  return `<button class="row${withDate?"":" nl"}" type="button" data-undo="${esc(x.id)}">
+    ${withDate?`<span class="date"><b>${esc(d?+d:"")}</b>${m?AY[+m-1]:""}</span>`:""}
+    <span><span class="t">${esc(x.metin)}${t?` · ${esc(t.sinif)}`:""}</span><br><span class="m">${hepsi()?esc(okulKisa(x.okul))+" — ":""}${esc(x.ayrinti||"Açıklama yok")}</span></span>
+    <span class="pill p-tamam">Tamamlandı</span></button>`;
+}
 function todoRow(x,opts={}){
   const tt=tahtaById(x.tahta);const [,m,d]=(x.bitis||"--").split("-");
   const yer=[hepsi()||!x.okul?esc(okulKisa(x.okul)):"",tt?esc(tt.sinif):""].filter(Boolean).join(" · ");
@@ -547,8 +554,7 @@ function renderOzet(){
   const bekRows=[...yBek.map(x=>todoRow(x,{noDel:true})),...iAcik.map(x=>isRow(x,true))];
   h+=`<h2 class="sec">Bekleyenler <button class="lnk" type="button" data-go="yap">+ Yapılacak ekle</button></h2><div class="card list">${bekRows.length?bekRows.slice(0,6).join(""):`<div class="note">Bekleyen iş yok.</div>`}${bekRows.length>6?`<button class="more" type="button" data-go="yap">${bekRows.length-6} tane daha</button>`:""}</div>`;
   const son=[...S.isler.filter(inOkul).filter(x=>x.durum==="tamam").map(x=>({d:x.tarih||"",o:x.olusturma||0,h:isRow(x,true)})),
-    ...S.yapilacaklar.filter(yIn).filter(x=>x.tamam).map(x=>{const [,m,d]=(x.bitis||"--").split("-");const tt=tahtaById(x.tahta);
-      return {d:x.bitis||"",o:x.olusturma||0,h:`<div class="todo"><span class="date"><b>${d?+d:""}</b>${m?AY[+m-1]:""}</span><div style="min-width:0"><div class="t" style="font-weight:600">Yapılacak not${tt?" · "+esc(tt.sinif):""}</div><div class="m">${esc(x.metin)}</div>${x.ayrinti?`<div class="ayr">${esc(x.ayrinti)}</div>`:""}</div><span class="pill p-tamam">Yapıldı</span></div>`}})]
+    ...S.yapilacaklar.filter(yIn).filter(x=>x.tamam).map(x=>({d:x.bitis||"",o:x.olusturma||0,h:doneTodoRow(x,true)}))]
     .sort((a,b)=>b.d.localeCompare(a.d)||b.o-a.o).slice(0,5);
   h+=`<h2 class="sec">Son yapılanlar <button class="lnk" type="button" data-liste>Liste al</button></h2><div class="card list">${son.length?son.map(e=>e.h).join(""):`<div class="note">Henüz tamamlanan iş yok. Sağ alttaki “İş ekle” ile kaydet.</div>`}${son.length?`<button class="more" type="button" data-go="isler">Tüm yapılanlar</button>`:""}</div>`;
   return h;
@@ -560,7 +566,7 @@ function renderIsler(){
   const yapT=(S.durum&&S.durum!=="tamam")?[]:S.yapilacaklar.filter(yIn).filter(x=>x.tamam&&(x.bitis||"").startsWith(S.ay)).filter(x=>{if(!q)return true;const t=tahtaById(x.tahta);return norm([x.metin,x.ayrinti,t&&t.sinif].join(" ")).includes(q)});
   const acik=list.filter(x=>x.durum!=="tamam").sort((a,b)=>(b.tarih||"").localeCompare(a.tarih||""));
   const bitti=list.filter(x=>x.durum==="tamam"&&(x.tarih||"").startsWith(S.ay));
-  const tam=[...bitti.map(x=>({d:x.tarih||"",o:x.olusturma||0,h:isRow(x,false)})),...yapT.map(x=>({d:x.bitis||"",o:x.olusturma||0,h:todoRow(x,{label:true,noDel:true})}))].sort((a,b)=>b.d.localeCompare(a.d)||b.o-a.o);
+  const tam=[...bitti.map(x=>({d:x.tarih||"",o:x.olusturma||0,h:isRow(x,false)})),...yapT.map(x=>({d:x.bitis||"",o:x.olusturma||0,h:doneTodoRow(x,false)}))].sort((a,b)=>b.d.localeCompare(a.d)||b.o-a.o);
   let h=tahtaAra();
   if(acik.length)h+=`<h2 class="sec">Açık / beklemede <span>${acik.length}</span></h2><div class="card list">${acik.map(x=>isRow(x,true)).join("")}</div>`;
   let cur=null;const parts=[];
@@ -791,6 +797,11 @@ $("#view").addEventListener("click",async e=>{
       const tb=tahtaById(x.tahta);
       if(t&&tb&&x.tdurum&&x.tdurum!=="calisiyor"&&tb.durum===x.tdurum){await save("tahtalar",tb.id,{durum:"calisiyor"});toast("Yapıldı. "+tb.sinif+" tekrar çalışıyor olarak işaretlendi")}
       else toast(t?"Yapıldı, Yapılanlar'a eklendi":"Yapılacaklara geri alındı")}
+    return}
+  const u=e.target.closest("[data-undo]");
+  if(u){const pl=u.querySelector(".pill");
+    if(u.dataset.sure){const x=S.yapilacaklar.find(y=>y.id===u.dataset.undo);if(x&&await save("yapilacaklar",x.id,{tamam:false,bitis:""}))toast("Yapılacaklara geri alındı")}
+    else{u.dataset.sure=1;pl.textContent="Geri al?";setTimeout(()=>{if(u.isConnected){delete u.dataset.sure;pl.textContent="Tamamlandı"}},3000)}
     return}
   const d=e.target.closest("[data-del]");
   if(d){if(d.dataset.sure){if(await remove("yapilacaklar",d.dataset.del))toast("Not silindi")}else{d.dataset.sure=1;d.textContent="Emin misin?";setTimeout(()=>{if(d.isConnected){delete d.dataset.sure;d.textContent="Sil"}},3000)}return}
