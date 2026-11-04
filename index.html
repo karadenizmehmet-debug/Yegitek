@@ -51,6 +51,15 @@ button{font:inherit;color:inherit}
 .hbtns{display:flex;gap:6px}
 .hb{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)}
 .hb:hover{background:var(--sunk)}
+.sync{display:flex;align-items:center;gap:6px;border:0;background:none;color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;padding:5px 6px;border-radius:6px;white-space:nowrap}
+.sync:hover{background:var(--sunk)}
+.logo h1,.hb{white-space:nowrap}
+@media (max-width:420px){.logo h1{font-size:18px}.hb{padding:6px 8px}}
+.sync::before{content:"";flex:none;width:9px;height:9px;border-radius:50%;background:var(--sc,var(--muted))}
+.sync[data-s="tamam"]{--sc:var(--ok)}
+.sync[data-s="kaydediliyor"],.sync[data-s="yukleniyor"]{--sc:var(--warn)}
+.sync[data-s="hata"],.sync[data-s="yetki"],.sync[data-s="yok"],.sync[data-s="cevrimdisi"]{--sc:var(--bad);color:var(--bad)}
+@media (max-width:440px){.sync span{display:none}.sync{padding:8px}}
 .okulbar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:10px;margin-inline:-2px;padding-inline:2px}
 .okulbar::-webkit-scrollbar{display:none}
 .okul{flex:none;display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 14px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
@@ -201,7 +210,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -260,10 +269,110 @@ const AY_UZUN=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağus
 const AY=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
 const TABS=["ozet","isler","yap","tahtalar"];
 
-const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const S={okullar:[],tahtalar:[],isler:[],yapilacaklar:[],okul:LS.get("yt2_okul")||"",tab:LS.get("yt2_tab")||"ozet",q:"",tf:"",durum:"",ay:"",db:null,
   loaded:{okullar:false,tahtalar:false,isler:false,yapilacaklar:false}};
 if(!TABS.includes(S.tab))S.tab="ozet";
+
+/* ---------- GitHub veri motoru ---------- */
+const GH={owner:"karadenizmehmet-debug",repo:"yegitek-veri",path:"veri.json",branch:"main"};
+const COLS=["okullar","tahtalar","isler","yapilacaklar"];
+const D={token:LS.get("yt_token")||"",sha:null,etag:null,pending:[],busy:false,timer:null};
+try{D.pending=JSON.parse(LS.get("yt_bekleyen")||"[]")}catch(e){D.pending=[]}
+const bosVeri=()=>({surum:1,okullar:[],tahtalar:[],isler:[],yapilacaklar:[]});
+let remote=bosVeri();
+const yeniId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+const kopya=o=>JSON.parse(JSON.stringify(o));
+function b64dec(s){const bin=atob(String(s).replace(/\s/g,""));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u)}
+function b64enc(str){const u=new TextEncoder().encode(str);let bin="";for(let i=0;i<u.length;i+=0x8000)bin+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(bin)}
+const ghUrl=()=>`https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.path}`;
+const ghHeaders=extra=>({Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",Authorization:"Bearer "+D.token,...extra});
+
+function applyOp(data,op){
+  const l=data[op.col]||(data[op.col]=[]);const i=l.findIndex(x=>x.id===op.id);
+  if(op.t==="add"){if(i<0)l.push({id:op.id,...op.data})}
+  else if(op.t==="upd"){if(i>=0)l[i]={...l[i],...op.data}}
+  else if(op.t==="del"){if(i>=0)l.splice(i,1)}
+}
+function showLocal(){
+  const d=kopya(remote);D.pending.forEach(op=>applyOp(d,op));
+  COLS.forEach(c=>{S[c]=Array.isArray(d[c])?d[c]:[];S.loaded[c]=true});
+  S.okullar.sort((a,b)=>(a.olusturma||0)-(b.olusturma||0));
+  render();
+}
+function cacheYaz(){LS.set("yt_cache",JSON.stringify({sha:D.sha,etag:D.etag,data:remote}))}
+function bekleyenYaz(){LS.set("yt_bekleyen",JSON.stringify(D.pending))}
+
+const SYNC={yok:"Bağlan",yukleniyor:"Yükleniyor",kaydediliyor:"Kaydediliyor",tamam:"Kaydedildi",hata:"Kaydedilemedi",yetki:"Anahtar geçersiz",cevrimdisi:"Çevrimdışı"};
+function setSync(s){
+  const b=$("#sync");if(b){b.dataset.s=s;b.querySelector("span").textContent=SYNC[s]||"";b.setAttribute("aria-label","GitHub bağlantısı: "+(SYNC[s]||""))}
+  const st=$("#status");if(!st)return;
+  st.textContent=s==="hata"?"Değişiklikler GitHub'a yazılamadı. Bu cihazda saklanıyor; internet gelince tekrar denenecek."
+    :s==="yetki"?"GitHub anahtarı geçersiz ya da süresi doldu. Üstteki durum düğmesinden yeni anahtar gir."
+    :s==="cevrimdisi"?"İnternet yok. Değişiklikler bu cihazda saklanıyor."
+    :s==="yukleniyor"&&!S.okullar.length?"Kayıtlar yükleniyor…":"";
+}
+
+async function fetchRemote(force){
+  const h=ghHeaders(!force&&D.etag?{"If-None-Match":D.etag}:{});
+  const r=await fetch(ghUrl()+"?ref="+encodeURIComponent(GH.branch),{headers:h,cache:"no-store"});
+  if(r.status===304)return "ayni";
+  if(r.status===401||r.status===403)throw {code:"token"};
+  if(r.status===404){
+    /* Dosya yoksa ilk kayıtta oluşturulur; repo hiç görünmüyorsa anahtarın izni yoktur. */
+    const rr=await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}`,{headers:ghHeaders(),cache:"no-store"});
+    if(!rr.ok)throw {code:"token"};
+    remote=bosVeri();D.sha=null;D.etag=null;cacheYaz();return "yeni";
+  }
+  if(!r.ok)throw {code:"http",status:r.status};
+  const j=await r.json();
+  remote=JSON.parse(b64dec(j.content));D.sha=j.sha;D.etag=r.headers.get("ETag");cacheYaz();
+  return "ok";
+}
+async function refresh(){
+  if(!D.token||D.busy)return;
+  setSync("yukleniyor");
+  try{await fetchRemote();showLocal();if(D.pending.length)flush();else setSync("tamam")}
+  catch(e){setSync(e&&e.code==="token"?"yetki":navigator.onLine?"hata":"cevrimdisi")}
+}
+const COLAD={okullar:"Okul",tahtalar:"Tahta",isler:"İş",yapilacaklar:"Yapılacak"},OPAD={add:"eklendi",upd:"güncellendi",del:"silindi"};
+function ozet(ops){
+  if(ops.length!==1)return `Yegitek: ${ops.length} değişiklik`;
+  const o=ops[0],t=o.col==="tahtalar"?(o.data&&o.data.sinif)||(tahtaById(o.id)||{}).sinif:"";
+  return `Yegitek: ${COLAD[o.col]||o.col} ${OPAD[o.t]}${t?" ("+t+")":""}`;
+}
+function queue(op){
+  D.pending.push(op);bekleyenYaz();showLocal();setSync("kaydediliyor");
+  clearTimeout(D.timer);D.timer=setTimeout(flush,700);
+}
+async function flush(){
+  if(D.busy||!D.pending.length||!D.token)return;
+  D.busy=true;setSync("kaydediliyor");
+  const ops=D.pending.slice();
+  try{
+    for(let deneme=0;deneme<3;deneme++){
+      const d=kopya(remote);ops.forEach(o=>applyOp(d,o));d.surum=1;d.guncelleme=new Date().toISOString();
+      const body={message:ozet(ops),content:b64enc(JSON.stringify(d,null,1)+"\n"),branch:GH.branch};
+      if(D.sha)body.sha=D.sha;
+      const r=await fetch(ghUrl(),{method:"PUT",headers:ghHeaders({"Content-Type":"application/json"}),body:JSON.stringify(body)});
+      if(r.status===409||r.status===422){await fetchRemote(true);continue}  /* başka cihaz yazmış: güncelini al, tekrar uygula */
+      if(r.status===401||r.status===403||r.status===404)throw {code:"token"};
+      if(!r.ok)throw {code:"http",status:r.status};
+      const j=await r.json();
+      remote=d;D.sha=j.content&&j.content.sha;D.etag=null;cacheYaz();
+      D.pending=D.pending.slice(ops.length);bekleyenYaz();
+      D.busy=false;showLocal();
+      if(D.pending.length)flush();else setSync("tamam");
+      return;
+    }
+    throw {code:"http"};
+  }catch(e){
+    D.busy=false;
+    setSync(e&&e.code==="token"?"yetki":navigator.onLine?"hata":"cevrimdisi");
+    if(!(e&&e.code==="token"))setTimeout(()=>{if(navigator.onLine)flush()},15000);
+  }
+}
+window.addEventListener("online",()=>flush());
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -466,6 +575,7 @@ function render(){
   renderOkulBar();renderNav();renderTools();
   const v=$("#view");
   if(!S.loaded.okullar){v.innerHTML="";return}
+  if(!D.token&&!S.okullar.length){v.innerHTML=emptyBox("GitHub'a bağlan","Kayıtlar özel <b class=\"mono\">"+esc(GH.repo)+"</b> reposunda duruyor. Görmek ve kaydetmek için erişim anahtarını gir.")+`<div style="display:flex;justify-content:center;margin-top:12px"><button class="btn pri" type="button" id="ilkBag">Bağlan</button></div>`;return}
   if(!S.okullar.length){v.innerHTML=emptyBox("Önce okullarını ekle","Üstteki “Okullar” düğmesiyle sorumlu olduğun okulları gir. Sonra tahta ve iş eklemeye başlayabilirsin.")+`<div style="display:flex;justify-content:center;margin-top:12px"><button class="btn pri" type="button" id="ilkOkul">Okulları gir</button></div>`;return}
   v.innerHTML=`<div class="stack">${S.tab==="ozet"?renderOzet():S.tab==="isler"?renderIsler():S.tab==="yap"?renderYap():renderTahtalar()}</div>`;
 }
@@ -485,12 +595,17 @@ function segVal(f,name){const b=f.querySelector(`[data-seg="${name}"] [aria-pres
 function bindSeg(f){f.querySelectorAll("[data-seg]").forEach(s=>s.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;s.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b))}))}
 function okulOptions(sel){return S.okullar.map(o=>`<option value="${esc(o.id)}" ${o.id===sel?"selected":""}>${esc(o.ad)}</option>`).join("")}
 function delConfirm(f,fn){const b=f.querySelector(".del");if(!b)return;b.addEventListener("click",()=>{if(b.dataset.sure)fn();else{b.dataset.sure=1;b.textContent="Silmek için tekrar dokun"}})}
+/* Kayıtlar önce bu cihazda uygulanır, ~0,7 sn içindeki değişiklikler tek commit olarak GitHub'a yazılır. */
 async function save(col,id,data){
-  if(!S.db){toast("Kaydedilemedi: kayıtlara bağlanılamadı");return false}
-  try{if(id)await S.db.collection(col).doc(id).update(data);else await S.db.collection(col).add({...data,olusturma:Date.now()});return true}
-  catch(e){toast(e&&e.code==="permission_denied"?"Bu sayfada kayıt yetkin yok":"Kaydedilemedi, tekrar dene");return false}
+  if(!D.token){baglantiSheet();return false}
+  if(id)queue({t:"upd",col,id,data});
+  else queue({t:"add",col,id:yeniId(),data:{...data,olusturma:Date.now()}});
+  return true;
 }
-async function remove(col,id){try{await S.db.collection(col).doc(id).delete();return true}catch(e){toast("Silinemedi, tekrar dene");return false}}
+async function remove(col,id){
+  if(!D.token){baglantiSheet();return false}
+  queue({t:"del",col,id});return true;
+}
 const defOkul=()=>!hepsi()&&S.okul?S.okul:(S.okullar[0]||{}).id;
 
 function isSheet(id,tid){
@@ -588,14 +703,13 @@ function listeSheet(){
       const fb=()=>{f.lOut.focus();f.lOut.select();toast("Metin seçildi, uzun basıp kopyala")};
       try{navigator.clipboard.writeText(v).then(done,fb)}catch(e){fb()}};
     f.querySelector("#lCsv").onclick=async()=>{
-      const dl=window.claude&&window.claude.use?await window.claude.use("downloads"):null;
-      if(!dl){toast("Bu görünümde dosya indirilemiyor, metni kopyala");return}
       const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
       const csv="﻿"+[["Liste","Tarih","Tahta","Tür","Açıklama","Durum"].map(q).join(";"),...rows.map(r=>[r.k==="bek"?"Yapılacak":"Yapılan",trTarih(r.tarih),r.tahta,r.tur,r.aciklama,r.durum].map(q).join(";"))].join("\r\n");
       const kisa=(S.okullar.find(o=>o.id===ok)||{}).kisa||"okul";
       const ad=`${kisa}-${tur==="yapilacak"?"yapilacaklar":tur==="yapilan"?"yapilanlar":"liste"}-${donem==="hepsi"?"tum":S.ay}.csv`;
-      try{const r=await dl.save({filename:ad,data:csv});if(r&&r.status==="saved")toast("Dosya indirildi")}
-      catch(e){if(e&&e.code!=="cancelled"&&e.code!=="declined")toast("Dosya indirilemedi, metni kopyala")}};
+      try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=ad;
+        document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast("Dosya indirildi")}
+      catch(e){toast("Dosya indirilemedi, metni kopyala")}};
   });
 }
 function okulSheet(){
@@ -641,6 +755,7 @@ $("#fDurum").addEventListener("change",e=>{S.durum=e.target.value;render()});
 $("#fab").onclick=()=>S.tab==="tahtalar"?tahtaSheet(null):isSheet(null);
 $("#view").addEventListener("click",async e=>{
   if(e.target.closest("#ilkOkul")){okulSheet();return}
+  if(e.target.closest("#ilkBag")){baglantiSheet();return}
   const c=e.target.closest("[data-chk]");
   if(c){const x=S.yapilacaklar.find(y=>y.id===c.dataset.chk);if(!x)return;const t=!x.tamam;
     if(await save("yapilacaklar",x.id,{tamam:t,bitis:t?today():""})){
@@ -661,22 +776,43 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 
 render();
 
-/* ---------- Data ---------- */
+/* ---------- Veri: GitHub özel reposu ---------- */
+/* Tüm kayıtlar tek bir JSON dosyasında durur. Okuma/yazma GitHub Contents API ile yapılır;
+   token yalnızca bu tarayıcının localStorage'ında tutulur, koda girmez. */
+function baglantiSheet(){
+  openSheet(`<h3>GitHub bağlantısı</h3><div class="sub">Kayıtlar <span class="mono">${esc(GH.owner)}/${esc(GH.repo)}</span> reposundaki <span class="mono">${esc(GH.path)}</span> dosyasında tutulur.</div>
+   <div class="f"><label for="gTok">Erişim anahtarı (token)</label><input id="gTok" type="password" class="mono" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></div>
+   <div class="hist"><b>Anahtar nasıl alınır</b>
+    <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+     <li>GitHub → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token</li>
+     <li>Repository access: <b>Only select repositories</b> → <span class="mono">${esc(GH.repo)}</span></li>
+     <li>Permissions → Repository permissions → <b>Contents: Read and write</b></li>
+     <li>Oluşan anahtarı yukarıya yapıştır.</li>
+    </ol>
+    <span style="color:var(--muted)">Anahtar yalnızca bu tarayıcıda saklanır. Ortak kullanılan bir bilgisayardaysan işin bitince “Bağlantıyı kaldır”a bas.</span></div>
+   <div class="btns">${D.token?`<button type="button" class="btn del">Bağlantıyı kaldır</button>`:""}<button type="button" class="btn" data-x>Vazgeç</button><button class="btn pri" type="submit">Bağlan</button></div>`,
+  f=>{
+    delConfirm(f,()=>{
+      if(D.pending.length){toast("Kaydedilmemiş değişiklik var, önce kaydedilmesini bekle");return}
+      D.token="";D.sha=null;D.etag=null;remote=bosVeri();
+      LS.del("yt_token");LS.del("yt_cache");showLocal();setSync("yok");closeSheet();toast("Bağlantı kaldırıldı")});
+    f.onsubmit=async e=>{e.preventDefault();
+      const t=f.gTok.value.trim();if(!t){f.gTok.focus();return}
+      const eski=D.token;D.token=t;D.etag=null;setSync("yukleniyor");
+      try{await fetchRemote(true);LS.set("yt_token",t);closeSheet();showLocal();setSync("tamam");toast("Bağlandı");flush()}
+      catch(err){D.token=eski;setSync(eski?"yetki":"yok");
+        toast(err&&err.code==="token"?"Anahtar geçersiz ya da "+GH.repo+" reposuna izni yok":"Bağlanılamadı, interneti kontrol et")}};
+  });
+}
+$("#sync").onclick=baglantiSheet;
+
 (async()=>{
-  const st=$("#status");
-  const timer=setTimeout(()=>{if(!Object.values(S.loaded).every(Boolean))st.textContent="Kayıtlar gelmedi. Bağlantını kontrol edip sayfayı yeniden aç."},10000);
-  const db=window.claude&&window.claude.use?await window.claude.use("db"):null;
-  if(!db){clearTimeout(timer);st.textContent="Kayıtlara erişilemiyor. Claude hesabınla giriş yapıp sayfayı aç.";return}
-  S.db=db;
-  for(const col of ["okullar","tahtalar","isler","yapilacaklar"]){
-    db.collection(col).onSnapshot(snap=>{
-      S[col]=snap.docs.map(d=>({id:d.id,...d.data()}));
-      if(col==="okullar")S.okullar.sort((a,b)=>(a.olusturma||0)-(b.olusturma||0));
-      S.loaded[col]=true;
-      if(Object.values(S.loaded).every(Boolean)){clearTimeout(timer);st.textContent=""}
-      render();
-    },err=>{clearTimeout(timer);st.textContent=err&&err.code==="revoked"?"Bu sayfaya erişimin kaldırıldı.":"Kayıtlar okunamadı. Sayfayı yeniden aç."});
-  }
+  try{const c=JSON.parse(LS.get("yt_cache")||"null");if(c&&c.data){remote=c.data;D.sha=c.sha;D.etag=c.etag}}catch(e){}
+  showLocal();
+  if(!D.token){setSync("yok");return}
+  await refresh();
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
+  window.addEventListener("online",()=>refresh());
 })();
 </script>
 
