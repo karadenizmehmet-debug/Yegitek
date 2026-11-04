@@ -66,6 +66,18 @@ button{font:inherit;color:inherit}
 .okul[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .okul .dot{min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font:700 11px/19px var(--f-body);text-align:center}
 .hint{color:var(--muted);font-size:13px;padding:7px 0}
+.curbar{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}
+.curbar b{font:800 18px/1.2 var(--f-disp);font-stretch:78%;min-width:0;overflow-wrap:anywhere}
+.curbar .hb{flex:none}
+.picker{display:flex;flex-direction:column;gap:10px}
+.ph{margin:6px 2px 4px;font:800 28px/1.1 var(--f-disp);font-stretch:74%;text-wrap:balance}
+.pick{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;align-items:center;text-align:left;width:100%;padding:18px 16px;cursor:pointer}
+.pick:hover{border-color:var(--accent)}
+.pick .n{font:800 23px/1.15 var(--f-disp);font-stretch:76%;overflow-wrap:anywhere}
+.pick .go{font:600 28px/1 var(--f-body);color:var(--accent)}
+.pick .bar,.pick .s{grid-column:1/-1}
+.pick .s{color:var(--muted);font-size:13.5px}
+.pick .s b{color:var(--bad)}
 
 /* Page */
 .wrap{max-width:880px;margin:0 auto;padding-block:16px calc(150px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
@@ -270,7 +282,7 @@ const AY=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","A
 const TABS=["ozet","isler","yap","tahtalar"];
 
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
-const S={okullar:[],tahtalar:[],isler:[],yapilacaklar:[],okul:LS.get("yt2_okul")||"",tab:LS.get("yt2_tab")||"ozet",q:"",tf:"",durum:"",ay:"",db:null,
+const S={okullar:[],tahtalar:[],isler:[],yapilacaklar:[],okul:"",tab:LS.get("yt2_tab")||"ozet",q:"",tf:"",durum:"",ay:"",db:null,
   loaded:{okullar:false,tahtalar:false,isler:false,yapilacaklar:false}};
 if(!TABS.includes(S.tab))S.tab="ozet";
 
@@ -397,19 +409,26 @@ const emptyBox=(t,x)=>`<div class="card"><div class="empty"><b>${t}</b>${x}</div
 
 function toast(msg){document.querySelectorAll(".toast").forEach(t=>t.remove());const t=document.createElement("div");t.className="toast";t.setAttribute("role","status");t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
 
+/* Uygulama her açılışta okul seçimiyle başlar; seçilen okul sadece bu oturum boyunca geçerli. */
 function fixOkul(){
   if(!S.loaded.okullar)return;
-  if(S.okul==="hepsi"&&S.okullar.length>1)return;
-  if(!S.okullar.some(o=>o.id===S.okul))S.okul=S.okullar[0]?S.okullar[0].id:"";
+  if(S.okul&&!S.okullar.some(o=>o.id===S.okul))S.okul="";
 }
+function okulSec(id){S.okul=id;S.tab="ozet";S.q="";S.tf="";S.durum="";$("#q").value="";render();window.scrollTo(0,0)}
 
 /* ---------- Header / nav ---------- */
 function renderOkulBar(){
   const el=$("#okulBar");
-  if(!S.okullar.length){el.innerHTML=`<span class="hint">${S.loaded.okullar?"Henüz okul yok. “Okullar” ile ekle.":"Okullar yükleniyor…"}</span>`;return}
-  const items=S.okullar.map(o=>({id:o.id,ad:o.kisa||o.ad,n:S.tahtalar.filter(t=>t.okul===o.id&&sorunlu(t)).length}));
-  if(S.okullar.length>1)items.push({id:"hepsi",ad:"Tüm okullar",n:0});
-  el.innerHTML=items.map(o=>`<button class="okul" type="button" data-o="${esc(o.id)}" aria-pressed="${o.id===S.okul}">${esc(o.ad)}${o.n?`<span class="dot" aria-label="${o.n} arızalı">${o.n}</span>`:""}</button>`).join("");
+  if(!S.okul){el.hidden=true;el.innerHTML="";return}
+  el.hidden=false;
+  const o=S.okullar.find(x=>x.id===S.okul)||{};
+  el.innerHTML=`<div class="curbar"><b>${esc(o.ad||"")}</b><button class="hb" type="button" data-degis>Okul değiştir</button></div>`;
+}
+function renderPicker(){
+  return `<div class="picker"><h2 class="ph">Bugün hangi okuldasın?</h2>${S.okullar.map(o=>{
+    const tt=S.tahtalar.filter(x=>x.okul===o.id),ar=tt.filter(sorunlu).length;
+    const bk=S.isler.filter(x=>x.okul===o.id&&x.durum!=="tamam").length+S.yapilacaklar.filter(x=>x.okul===o.id&&!x.tamam).length;
+    return `<button class="card pick" type="button" data-o="${esc(o.id)}"><span class="n">${esc(o.ad)}</span><span class="go" aria-hidden="true">›</span>${tt.length?bar(tt).html:""}<span class="s">${tt.length} tahta${ar?` · <b>${ar} arızalı</b>`:""}${bk?` · ${bk} bekleyen iş`:""}</span></button>`}).join("")}</div>`;
 }
 function renderNav(){
   document.querySelectorAll(".tb").forEach(b=>{if(b.dataset.tab===S.tab)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
@@ -573,10 +592,13 @@ function renderTahtalar(){
 function render(){
   fixOkul();
   renderOkulBar();renderNav();renderTools();
+  $(".tabbar").hidden=!S.okul;
+  if(!S.okul)["#tools","#monthNav","#quickAdd","#fab"].forEach(s=>$(s).hidden=true);
   const v=$("#view");
   if(!S.loaded.okullar){v.innerHTML="";return}
   if(!D.token&&!S.okullar.length){v.innerHTML=emptyBox("GitHub'a bağlan","Kayıtlar özel <b class=\"mono\">"+esc(GH.repo)+"</b> reposunda duruyor. Görmek ve kaydetmek için erişim anahtarını gir.")+`<div style="display:flex;justify-content:center;margin-top:12px"><button class="btn pri" type="button" id="ilkBag">Bağlan</button></div>`;return}
   if(!S.okullar.length){v.innerHTML=emptyBox("Önce okullarını ekle","Üstteki “Okullar” düğmesiyle sorumlu olduğun okulları gir. Sonra tahta ve iş eklemeye başlayabilirsin.")+`<div style="display:flex;justify-content:center;margin-top:12px"><button class="btn pri" type="button" id="ilkOkul">Okulları gir</button></div>`;return}
+  if(!S.okul){v.innerHTML=renderPicker();return}
   v.innerHTML=`<div class="stack">${S.tab==="ozet"?renderOzet():S.tab==="isler"?renderIsler():S.tab==="yap"?renderYap():renderTahtalar()}</div>`;
 }
 
@@ -735,7 +757,7 @@ function okulSheet(){
 /* ---------- Events ---------- */
 function goTab(t){S.tab=t;S.q="";$("#q").value="";LS.set("yt2_tab",t);render();window.scrollTo(0,0)}
 $("#tabbar").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(b)goTab(b.dataset.tab)});
-$("#okulBar").addEventListener("click",e=>{const b=e.target.closest("[data-o]");if(!b)return;S.okul=b.dataset.o;LS.set("yt2_okul",S.okul);render()});
+$("#okulBar").addEventListener("click",e=>{if(e.target.closest("[data-degis]")){S.okul="";render();window.scrollTo(0,0)}});
 $("#btnOkullar").onclick=okulSheet;
 $("#btnListe").onclick=listeSheet;
 $("#mPrev").onclick=()=>{S.ay=ayKaydir(S.ay,-1);render()};
@@ -765,7 +787,7 @@ $("#view").addEventListener("click",async e=>{
     return}
   const d=e.target.closest("[data-del]");
   if(d){if(d.dataset.sure){if(await remove("yapilacaklar",d.dataset.del))toast("Not silindi")}else{d.dataset.sure=1;d.textContent="Emin misin?";setTimeout(()=>{if(d.isConnected){delete d.dataset.sure;d.textContent="Sil"}},3000)}return}
-  const o=e.target.closest("[data-o]");if(o){S.okul=o.dataset.o;LS.set("yt2_okul",S.okul);render();window.scrollTo(0,0);return}
+  const o=e.target.closest("[data-o]");if(o){okulSec(o.dataset.o);return}
   const g=e.target.closest("[data-go]");if(g){if(g.dataset.tf!==undefined)S.tf=g.dataset.tf;goTab(g.dataset.go);return}
   const tf=e.target.closest("[data-tf]");if(tf){S.tf=tf.dataset.tf;render();return}
   if(e.target.closest("[data-liste]")){listeSheet();return}
