@@ -275,7 +275,7 @@ const S={okullar:[],tahtalar:[],isler:[],yapilacaklar:[],okul:LS.get("yt2_okul")
 if(!TABS.includes(S.tab))S.tab="ozet";
 
 /* ---------- GitHub veri motoru ---------- */
-const GH={owner:"karadenizmehmet-debug",repo:"yegitek-veri",path:"veri.json",branch:"main"};
+const GH={owner:"karadenizmehmet-debug",repo:"Kayitlar",path:"yegitek/veri.json",branch:"main"};
 const COLS=["okullar","tahtalar","isler","yapilacaklar"];
 const D={token:LS.get("yt_token")||"",sha:null,etag:null,pending:[],busy:false,timer:null};
 try{D.pending=JSON.parse(LS.get("yt_bekleyen")||"[]")}catch(e){D.pending=[]}
