@@ -243,7 +243,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.14</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.15</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -459,7 +459,12 @@ async function ayarKaydet(patch){
 const isoGun=ms=>{const d=new Date(ms);return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
 const girilen=x=>x.olusturma?kisaTarih(isoGun(x.olusturma)):"";
 /* Yapıldı tiki: Güncelleme/İmaj türünü işler; arızalı / bakımda / serviste tahtayı, başka açık notu yoksa, çalışıyora döndürür. */
+const SNAP=["durum","gSurum","gTarih","iSurum","iTarih"];
 async function tamamSonrasi(x,tids){
+  /* Geri alınabilsin diye tahtaların önceki hali nota yazılır. */
+  const onceki={...(x.onceki||{})};
+  tids.forEach(tid=>{const tb=tahtaById(tid);if(tb&&!onceki[tid])onceki[tid]=Object.fromEntries(SNAP.map(k=>[k,tb[k]??null]))});
+  await save("yapilacaklar",x.id,{onceki});
   await turIsle(x.tur,tids,today());
   const donen=[];
   for(const tid of tids){
@@ -467,6 +472,19 @@ async function tamamSonrasi(x,tids){
     if(S.yapilacaklar.some(y=>y.id!==x.id&&!y.tamam&&tahtaIds(y).includes(tid)&&!tahtaDone(y,tid)))continue;
     await save("tahtalar",tid,{durum:"calisiyor"});donen.push(tb.sinif);
   }
+  return donen;
+}
+async function geriAl(x,tids){
+  const onceki={...(x.onceki||{})},donen=[];
+  for(const tid of tids){
+    const o=onceki[tid],tb=tahtaById(tid);if(!o)continue;
+    delete onceki[tid];
+    if(!tb)continue;
+    const d={...o};if(tb.durum!=="calisiyor")delete d.durum;  /* arada elle değiştirilmişse durumuna dokunma */
+    if(d.durum&&d.durum!==tb.durum)donen.push(tb.sinif);
+    await save("tahtalar",tid,d);
+  }
+  await save("yapilacaklar",x.id,{onceki});
   return donen;
 }
 const turOptions=sel=>[...IS_TUR,...(sel&&!IS_TUR.includes(sel)?[sel]:[])].map(t=>`<option ${t===sel?"selected":""}>${esc(t)}</option>`).join("");
@@ -921,18 +939,18 @@ $("#view").addEventListener("click",async e=>{
     if(tdone[tid])delete tdone[tid];else tdone[tid]=today();
     const tamam=tahtaIds(x).every(i=>tdone[i]);
     if(!await save("yapilacaklar",x.id,{tdone,tamam,bitis:tamam?today():""}))return;
-    const tb=tahtaById(tid),donen=tdone[tid]?await tamamSonrasi(x,[tid]):[];
-    toast(tdone[tid]?(tb?tb.sinif:"")+" yapıldı"+(donen.length?", tekrar çalışıyor olarak işaretlendi":""):"Yapılacaklara geri alındı");
+    const tb=tahtaById(tid),donen=tdone[tid]?await tamamSonrasi(x,[tid]):await geriAl(x,[tid]);
+    toast(tdone[tid]?(tb?tb.sinif:"")+" yapıldı"+(donen.length?", tekrar çalışıyor olarak işaretlendi":""):"Yapılacaklara geri alındı"+(donen.length?". "+donen.join(", ")+" eski durumuna döndü":""));
     return}
   if(c){const x=S.yapilacaklar.find(y=>y.id===c.dataset.chk);if(!x)return;const t=!x.tamam;const ids=tahtaIds(x);
     const tdone=t?Object.fromEntries(ids.map(i=>[i,today()])):{};
     if(await save("yapilacaklar",x.id,{tamam:t,bitis:t?today():"",tdone})){
-      const donen=t?await tamamSonrasi(x,ids):[];
-      toast(t?"Yapıldı, Yapılanlar'a eklendi"+(donen.length?". "+donen.join(", ")+" tekrar çalışıyor":""):"Yapılacaklara geri alındı")}
+      const donen=t?await tamamSonrasi(x,ids):await geriAl(x,ids);
+      toast(t?"Yapıldı, Yapılanlar'a eklendi"+(donen.length?". "+donen.join(", ")+" tekrar çalışıyor":""):"Yapılacaklara geri alındı"+(donen.length?". "+donen.join(", ")+" eski durumuna döndü":""))}
     return}
   const u=e.target.closest("[data-undo]");
   if(u){const pl=u.querySelector(".pill");
-    if(u.dataset.sure){const x=S.yapilacaklar.find(y=>y.id===u.dataset.undo);if(x&&await save("yapilacaklar",x.id,{tamam:false,bitis:"",tdone:{}}))toast("Yapılacaklara geri alındı")}
+    if(u.dataset.sure){const x=S.yapilacaklar.find(y=>y.id===u.dataset.undo);if(x&&await save("yapilacaklar",x.id,{tamam:false,bitis:"",tdone:{}})){const donen=await geriAl(x,tahtaIds(x));toast("Yapılacaklara geri alındı"+(donen.length?". "+donen.join(", ")+" eski durumuna döndü":""))}}
     else{u.dataset.sure=1;pl.textContent="Geri al?";setTimeout(()=>{if(u.isConnected){delete u.dataset.sure;pl.textContent="Tamamlandı"}},3000)}
     return}
   const d=e.target.closest("[data-del]");
