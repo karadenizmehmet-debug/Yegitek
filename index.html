@@ -237,7 +237,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.9</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.10</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -433,7 +433,9 @@ function katTahmin(sinif){
   if(n.includes("konferans")||n.includes("anaokul")||/^m-?[12]$/.test(n)||n.includes("kütüphane")||n.includes("fen"))return "1";
   return "";
 }
-const katOf=t=>t.kat||katTahmin(t.sinif)||"0";
+/* Kat düzeni yalnızca Şehit Coşkun okulunda geçerli. */
+const katOkul=id=>{const o=S.okullar.find(x=>x.id===id);return !!o&&norm((o.ad||"")+" "+(o.kisa||"")).includes("coşkun")};
+const katOf=t=>katOkul(t.okul)?(t.kat||katTahmin(t.sinif)||"0"):"0";
 const katAd=k=>KATLAR[k]||"Kat belirsiz";
 const katSort=(a,b)=>KAT_SIRA.indexOf(katOf(a))-KAT_SIRA.indexOf(katOf(b))||sinifSort(a,b);
 const sonIs=tid=>S.isler.filter(i=>i.tahta===tid).sort((a,b)=>(b.tarih||"").localeCompare(a.tarih||""))[0];
@@ -622,10 +624,10 @@ function renderTahtalar(){
   const base=S.tahtalar.filter(inOkul);
   const c={};base.forEach(x=>c[x.durum]=(c[x.durum]||0)+1);
   const kc={};base.forEach(x=>{const k=katOf(x);kc[k]=(kc[k]||0)+1});
-  if(S.kat&&!kc[S.kat])S.kat="";
+  if(S.kat&&(hepsi()||!katOkul(S.okul)||!kc[S.kat]))S.kat="";
   const list=base.filter(x=>!S.tf||x.durum===S.tf||(S.tf==="arizali"&&x.durum==="serviste")).filter(x=>!S.kat||katOf(x)===S.kat).filter(x=>!q||norm([x.sinif,x.marka,x.seri,x.not].join(" ")).includes(q));
   let h=`<div class="chips" role="group" aria-label="Duruma göre süz"><button type="button" class="lg" data-tf="" aria-pressed="${!S.tf}">Tümü <b>${base.length}</b></button>${T_ORDER.filter(k=>c[k]).map(k=>`<button type="button" class="lg s-${k}" data-tf="${k}" aria-pressed="${S.tf===k}">${TAHTA_DURUM[k]} <b>${c[k]}</b></button>`).join("")}</div>`;
-  if(KAT_SIRA.some(k=>kc[k])&&Object.keys(kc).length>0)h+=`<div class="chips" role="group" aria-label="Kata göre süz"><button type="button" class="lg kt" data-kat="" aria-pressed="${!S.kat}">Tüm katlar</button>${KAT_SIRA.filter(k=>kc[k]).map(k=>`<button type="button" class="lg kt" data-kat="${k}" aria-pressed="${S.kat===k}">${katAd(k)} <b>${kc[k]}</b></button>`).join("")}</div>`;
+  if(!hepsi()&&katOkul(S.okul)&&base.length)h+=`<div class="chips" role="group" aria-label="Kata göre süz"><button type="button" class="lg kt" data-kat="" aria-pressed="${!S.kat}">Tüm katlar</button>${KAT_SIRA.filter(k=>kc[k]).map(k=>`<button type="button" class="lg kt" data-kat="${k}" aria-pressed="${S.kat===k}">${katAd(k)} <b>${kc[k]}</b></button>`).join("")}</div>`;
   if(!base.length)return h+emptyBox("Henüz tahta eklenmedi","Sağ alttaki “Tahta ekle” ile sınıfı, markayı ve seri numarasını kaydet.");
   if(!list.length)return h+emptyBox("Eşleşen tahta yok","Aramayı veya durum süzgecini değiştir.");
   const ids=hepsi()?S.okullar.map(o=>o.id):[S.okul];
@@ -633,8 +635,8 @@ function renderTahtalar(){
     const l=list.filter(x=>x.okul===oid).sort(katSort);if(!l.length)return "";
     const tile=x=>{const s=sonIs(x.id);
       return `<button class="tile s-${esc(x.durum)}" type="button" data-tahta="${esc(x.id)}"><span class="ts">${esc(x.sinif||"?")}</span><span class="tm">${esc(x.marka||"Marka girilmedi")}</span><span class="tf"><span class="pill">${TAHTA_DURUM[x.durum]||""}</span><span class="mono">${s?esc(kisaTarih(s.tarih)):""}</span></span></button>`};
-    const gruplar=KAT_SIRA.map(k=>({k,l:l.filter(x=>katOf(x)===k)})).filter(g=>g.l.length);
-    const kBaslik=gruplar.length>1||S.kat;
+    const gruplar=katOkul(oid)?KAT_SIRA.map(k=>({k,l:l.filter(x=>katOf(x)===k)})).filter(g=>g.l.length):[{k:"0",l}];
+    const kBaslik=katOkul(oid)&&(gruplar.length>1||S.kat);
     return `${hepsi()?`<h2 class="sec">${esc(okulAd(oid))} <span>${l.length}</span></h2>`:""}${gruplar.map(g=>`${kBaslik?`<h3 class="kat">${esc(katAd(g.k))} <span>${g.l.length}</span></h3>`:""}<div class="tgrid">${g.l.map(tile).join("")}</div>`).join("")}`}).join("");
   return h;
 }
@@ -746,7 +748,7 @@ function tahtaSheet(id){
    <div class="f"><span class="lb">Durum</span>${seg("durum",TAHTA_DURUM,x.durum,true)}</div>
    <div class="two"><div class="f"><label for="tOkul">Okul</label><select id="tOkul">${okulOptions(x.okul)}</select></div>
    <div class="f"><label for="tSinif">Sınıf / yer</label><input id="tSinif" placeholder="Ör. 6-A, BT sınıfı" value="${esc(x.sinif||"")}"></div></div>
-   <div class="f"><label for="tKat">Kat</label><select id="tKat"><option value="">Otomatik (sınıf adından)</option>${Object.entries(KATLAR).map(([k,v])=>`<option value="${k}" ${k===(x.kat||"")?"selected":""}>${v}</option>`).join("")}</select></div>
+   <div class="f" id="tKatBox" ${katOkul(x.okul)?"":"hidden"}><label for="tKat">Kat</label><select id="tKat"><option value="">Otomatik (sınıf adından)</option>${Object.entries(KATLAR).map(([k,v])=>`<option value="${k}" ${k===(x.kat||"")?"selected":""}>${v}</option>`).join("")}</select></div>
    <div class="two"><div class="f"><label for="tMarka">Marka / model</label><input id="tMarka" placeholder="Ör. Vestel 75&quot; Faz-3" value="${esc(x.marka||"")}"></div>
    <div class="f"><label for="tSeri">Seri no</label><input id="tSeri" class="mono" value="${esc(x.seri||"")}"></div></div>
    <div class="f"><label for="tNot">Not</label><textarea id="tNot" placeholder="Ör. Sağ hoparlör cızırtılı, kumanda yok">${esc(x.not||"")}</textarea></div>
@@ -755,11 +757,12 @@ function tahtaSheet(id){
    <div class="btns">${id?`<button type="button" class="btn del">Sil</button><button type="button" class="btn" data-is>+ Bu tahtaya iş</button>`:""}<button type="button" class="btn" data-x>Vazgeç</button><button class="btn pri" type="submit">Kaydet</button></div>`,
   f=>{
     bindSeg(f);
+    f.querySelector("#tOkul").addEventListener("change",e=>{f.querySelector("#tKatBox").hidden=!katOkul(e.target.value)});
     const bi=f.querySelector("[data-is]");if(bi)bi.onclick=()=>{closeSheet();isSheet(null,id)};
     delConfirm(f,async()=>{if(await remove("tahtalar",id)){closeSheet();toast("Tahta silindi")}});
     f.onsubmit=async e=>{e.preventDefault();
       const sinif=f.tSinif.value.trim();if(!sinif){f.tSinif.focus();toast("Sınıf / yer adını yaz");return}
-      const d={okul:f.tOkul.value,sinif,marka:f.tMarka.value.trim(),seri:f.tSeri.value.trim(),durum:segVal(f,"durum")||"calisiyor",kat:f.tKat.value,not:f.tNot.value.trim()};
+      const d={okul:f.tOkul.value,sinif,marka:f.tMarka.value.trim(),seri:f.tSeri.value.trim(),durum:segVal(f,"durum")||"calisiyor",kat:katOkul(f.tOkul.value)?f.tKat.value:"",not:f.tNot.value.trim()};
       if(await save("tahtalar",id,d)){closeSheet();toast("Tahta kaydedildi")}};
   });
 }
