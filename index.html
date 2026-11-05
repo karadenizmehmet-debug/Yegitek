@@ -243,7 +243,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.13</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.14</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -456,6 +456,19 @@ async function ayarKaydet(patch){
   else queue({t:"add",col:"ayarlar",id:"genel",data:{...patch,olusturma:Date.now()}});
   return true;
 }
+const isoGun=ms=>{const d=new Date(ms);return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const girilen=x=>x.olusturma?kisaTarih(isoGun(x.olusturma)):"";
+/* Yapıldı tiki: Güncelleme/İmaj türünü işler; arızalı / bakımda / serviste tahtayı, başka açık notu yoksa, çalışıyora döndürür. */
+async function tamamSonrasi(x,tids){
+  await turIsle(x.tur,tids,today());
+  const donen=[];
+  for(const tid of tids){
+    const tb=tahtaById(tid);if(!tb||!["arizali","bakimda","serviste"].includes(tb.durum))continue;
+    if(S.yapilacaklar.some(y=>y.id!==x.id&&!y.tamam&&tahtaIds(y).includes(tid)&&!tahtaDone(y,tid)))continue;
+    await save("tahtalar",tid,{durum:"calisiyor"});donen.push(tb.sinif);
+  }
+  return donen;
+}
 const turOptions=sel=>[...IS_TUR,...(sel&&!IS_TUR.includes(sel)?[sel]:[])].map(t=>`<option ${t===sel?"selected":""}>${esc(t)}</option>`).join("");
 const sonIs=tid=>S.isler.filter(i=>i.tahta===tid).sort((a,b)=>(b.tarih||"").localeCompare(a.tarih||""))[0];
 const sorunlu=x=>x.durum==="arizali"||x.durum==="serviste";
@@ -539,14 +552,14 @@ function doneTodoRow(x,withDate){
   const ad=tahtaAdlari(x);const [,m,d]=(x.bitis||"--").split("-");
   return `<button class="row${withDate?"":" nl"}" type="button" data-undo="${esc(x.id)}">
     ${withDate?`<span class="date"><b>${esc(d?+d:"")}</b>${m?AY[+m-1]:""}</span>`:""}
-    <span><span class="t">${x.tur?esc(x.tur)+" · ":""}${esc(x.metin)}${ad?` · ${esc(ad)}`:""}</span><br><span class="m">${hepsi()?esc(okulKisa(x.okul))+" — ":""}${esc(x.ayrinti||"Açıklama yok")}</span></span>
+    <span><span class="t">${x.tur?esc(x.tur)+" · ":""}${esc(x.metin)}${ad?` · ${esc(ad)}`:""}</span><br><span class="m">${hepsi()?esc(okulKisa(x.okul))+" — ":""}${[girilen(x)?"Girilen "+esc(girilen(x)):"",d?"Yapıldı "+(+d)+" "+AY[+m-1]:""].filter(Boolean).join(" · ")}${x.ayrinti?" — "+esc(x.ayrinti):""}</span></span>
     <span class="pill p-tamam">Tamamlandı</span></button>`;
 }
 function todoRow(x,opts={}){
   const ids=tahtaIds(x),tt=ids.length===1?tahtaById(ids[0]):null;const [,m,d]=(x.bitis||"--").split("-");
   const yer=[hepsi()||!x.okul?esc(okulKisa(x.okul)):"",ids.length>1?`${ids.filter(i=>tahtaDone(x,i)).length}/${ids.length} tahta`:tt?esc(tt.sinif):""].filter(Boolean).join(" · ");
   const pill=tt&&!x.tamam&&tt.durum!=="calisiyor"?`<span class="pill s-${esc(tt.durum)}">${TAHTA_DURUM[tt.durum]||""}</span>`:"";
-  const meta=[x.tur?esc(x.tur):"",yer,x.tamam&&d?`${+d} ${AY[+m-1]} yapıldı`:""].filter(Boolean).join(" · ");
+  const meta=[x.tur?esc(x.tur):"",yer,girilen(x)?"Girilen "+esc(girilen(x)):"",x.tamam&&d?`Yapıldı ${+d} ${AY[+m-1]}`:""].filter(Boolean).join(" · ");
   const subs=ids.length>1&&!opts.label?`<div class="tsubs">${ids.map(i=>{const dn=tahtaDone(x,i),tb=tahtaById(i);return `<button class="tsub${dn?" on":""}" type="button" aria-pressed="${dn}" data-tsub="${esc(i)}" data-note="${esc(x.id)}">${dn?"✓ ":""}${esc(tb?tb.sinif:"Silinmiş tahta")}</button>`}).join("")}</div>`:"";
   return `<div class="todo">
     <button class="chk" type="button" role="checkbox" aria-checked="${!!x.tamam}" aria-label="${x.tamam?"Tiki kaldır":"Yapıldı olarak işaretle"}" data-chk="${esc(x.id)}">${x.tamam?"✓":""}</button>
@@ -908,18 +921,14 @@ $("#view").addEventListener("click",async e=>{
     if(tdone[tid])delete tdone[tid];else tdone[tid]=today();
     const tamam=tahtaIds(x).every(i=>tdone[i]);
     if(!await save("yapilacaklar",x.id,{tdone,tamam,bitis:tamam?today():""}))return;
-    if(tdone[tid])await turIsle(x.tur,[tid],today());
-    const tb=tahtaById(tid);
-    if(tdone[tid]&&tb&&x.tdurum&&x.tdurum!=="calisiyor"&&tb.durum===x.tdurum){await save("tahtalar",tb.id,{durum:"calisiyor"});toast(tb.sinif+" tekrar çalışıyor olarak işaretlendi")}
-    else toast(tdone[tid]?tb.sinif+" yapıldı":"Yapılacaklara geri alındı");
+    const tb=tahtaById(tid),donen=tdone[tid]?await tamamSonrasi(x,[tid]):[];
+    toast(tdone[tid]?(tb?tb.sinif:"")+" yapıldı"+(donen.length?", tekrar çalışıyor olarak işaretlendi":""):"Yapılacaklara geri alındı");
     return}
   if(c){const x=S.yapilacaklar.find(y=>y.id===c.dataset.chk);if(!x)return;const t=!x.tamam;const ids=tahtaIds(x);
     const tdone=t?Object.fromEntries(ids.map(i=>[i,today()])):{};
     if(await save("yapilacaklar",x.id,{tamam:t,bitis:t?today():"",tdone})){
-      if(t)await turIsle(x.tur,ids,today());
-      const tb=ids.length===1?tahtaById(ids[0]):null;
-      if(t&&tb&&x.tdurum&&x.tdurum!=="calisiyor"&&tb.durum===x.tdurum){await save("tahtalar",tb.id,{durum:"calisiyor"});toast("Yapıldı. "+tb.sinif+" tekrar çalışıyor olarak işaretlendi")}
-      else toast(t?"Yapıldı, Yapılanlar'a eklendi":"Yapılacaklara geri alındı")}
+      const donen=t?await tamamSonrasi(x,ids):[];
+      toast(t?"Yapıldı, Yapılanlar'a eklendi"+(donen.length?". "+donen.join(", ")+" tekrar çalışıyor":""):"Yapılacaklara geri alındı")}
     return}
   const u=e.target.closest("[data-undo]");
   if(u){const pl=u.querySelector(".pill");
