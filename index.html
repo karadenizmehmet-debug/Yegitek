@@ -195,11 +195,12 @@ h3.kat{margin:10px 2px 6px;font:700 13px var(--f-body);color:var(--muted);letter
 h3.kat span{font-weight:600}
 .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 @media (max-width:400px){.tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.tile{position:relative;display:flex;flex-direction:column;gap:3px;text-align:left;height:132px;padding:14px 12px 10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer;min-width:0;overflow:hidden;box-shadow:var(--shadow)}
+.tile{position:relative;display:flex;flex-direction:column;gap:3px;text-align:left;height:160px;padding:14px 12px 10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer;min-width:0;overflow:hidden;box-shadow:var(--shadow)}
 .tile::before{content:"";position:absolute;inset:0 0 auto;height:5px;background:var(--c)}
 .tile:hover{border-color:var(--c)}
 .tile .ts{font:800 24px/1.05 var(--f-disp);font-stretch:68%;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tile .tm{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .sn{font:600 11.5px var(--f-mono,ui-monospace,monospace);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:15px}
 .tile .tf{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:auto}
 .tile .rz{flex-wrap:nowrap;overflow:hidden;margin-top:2px}
 .tile .rz .pill{font-size:11px;padding:2px 6px}
@@ -253,7 +254,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.17</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.18</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -683,7 +684,7 @@ function renderTahtalar(){
   h+=ids.map(oid=>{
     const l=list.filter(x=>x.okul===oid).sort(katSort);if(!l.length)return "";
     const tile=x=>{const s=sonIs(x.id);
-      return `<button class="tile s-${esc(x.durum)}" type="button" data-tahta="${esc(x.id)}"><span class="ts">${esc(x.sinif||"?")}</span><span class="tm">${esc(x.marka||"Marka girilmedi")}</span>${rozetler(x).length?`<span class="rz">${rozetler(x).map(r=>`<span class="pill w">${r}</span>`).join("")}</span>`:""}<span class="tf"><span class="pill">${TAHTA_DURUM[x.durum]||""}</span><span class="mono">${s?esc(kisaTarih(s.tarih)):""}</span></span></button>`};
+      return `<button class="tile s-${esc(x.durum)}" type="button" data-tahta="${esc(x.id)}"><span class="ts">${esc(x.sinif||"?")}</span><span class="tm">${esc(x.marka||"Marka girilmedi")}</span><span class="sn">${esc(x.seri||"Seri no yok")}</span>${rozetler(x).length?`<span class="rz">${rozetler(x).map(r=>`<span class="pill w">${r}</span>`).join("")}</span>`:""}<span class="tf"><span class="pill">${TAHTA_DURUM[x.durum]||""}</span><span class="mono">${s?esc(kisaTarih(s.tarih)):""}</span></span></button>`};
     const gruplar=katOkul(oid)?KAT_SIRA.map(k=>({k,l:l.filter(x=>katOf(x)===k)})).filter(g=>g.l.length):[{k:"0",l}];
     const kBaslik=katOkul(oid)&&(gruplar.length>1||S.kat);
     return `${hepsi()?`<h2 class="sec">${esc(okulAd(oid))} <span>${l.length}</span></h2>`:""}${gruplar.map(g=>`${kBaslik?`<h3 class="kat">${esc(katAd(g.k))} <span>${g.l.length}</span></h3>`:""}<div class="tgrid">${g.l.map(tile).join("")}</div>`).join("")}`}).join("");
