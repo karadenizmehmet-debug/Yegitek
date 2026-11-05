@@ -157,6 +157,11 @@ h2.sec .lnk{font:600 13px var(--f-body);letter-spacing:0;text-transform:none;col
 .rz{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .hbtns{flex-wrap:wrap;justify-content:flex-end}
 .tchips label{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--line);border-radius:999px;font-size:14px;cursor:pointer}
+/* Tahta seçici: eşit boyutlu 3 sütunlu kutular; seçilen kutu renkli */
+.tg .tchips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.tg .tchips label{position:relative;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;min-height:44px;padding:6px 4px;border-radius:10px;font-size:13px;font-weight:600;line-height:1.15;overflow-wrap:anywhere;user-select:none}
+.tg .tchips label input{position:absolute;opacity:0;pointer-events:none}
+.tg .tchips label:has(input:checked){background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:800;box-shadow:inset 0 0 0 1px var(--accent)}
 .todo .ayr{color:var(--muted);font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:3px}
 .todo .m{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
 .x{background:none;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:6px 8px;border-radius:6px;white-space:nowrap}
@@ -187,14 +192,16 @@ h3.kat{margin:10px 2px 6px;font:700 13px var(--f-body);color:var(--muted);letter
 h3.kat span{font-weight:600}
 .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 @media (max-width:400px){.tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.tile{position:relative;display:flex;flex-direction:column;gap:3px;text-align:left;padding:14px 12px 10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer;min-width:0;overflow:hidden;box-shadow:var(--shadow)}
+.tile{position:relative;display:flex;flex-direction:column;gap:3px;text-align:left;height:132px;padding:14px 12px 10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer;min-width:0;overflow:hidden;box-shadow:var(--shadow)}
 .tile::before{content:"";position:absolute;inset:0 0 auto;height:5px;background:var(--c)}
 .tile:hover{border-color:var(--c)}
-.tile .ts{font:800 26px/1.05 var(--f-disp);font-stretch:68%;overflow-wrap:anywhere}
+.tile .ts{font:800 24px/1.05 var(--f-disp);font-stretch:68%;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tile .tm{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tile .tf{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:6px}
+.tile .tf{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:auto}
+.tile .rz{flex-wrap:nowrap;overflow:hidden;margin-top:2px}
+.tile .rz .pill{font-size:11px;padding:2px 6px}
 .tile .tf .mono{color:var(--muted)}
-.tile.s-calisiyor .pill{background:none;padding-left:0}
+.tile.s-calisiyor .tf .pill{background:none;padding-left:0}
 
 /* Tab bar + FAB */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
@@ -243,7 +250,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.15</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.16</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
