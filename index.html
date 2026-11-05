@@ -156,6 +156,9 @@ h2.sec .lnk{font:600 13px var(--f-body);letter-spacing:0;text-transform:none;col
 .pill.w{--c:var(--warn);--cs:var(--warn-soft)}
 .rz{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .hbtns{flex-wrap:wrap;justify-content:flex-end}
+.srow{display:flex;gap:8px}
+.srow input{flex:1;min-width:0}
+.srow .btn{flex:none;white-space:nowrap}
 .tchips label{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--line);border-radius:999px;font-size:14px;cursor:pointer}
 /* Tahta seçici: eşit boyutlu 3 sütunlu kutular; seçilen kutu renkli */
 .tg .tchips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
@@ -250,7 +253,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.16</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.17</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -797,6 +800,36 @@ function todoSheet(id){
       toast(tids.length&&td?"Eklendi, "+tids.length+" tahta "+TAHTA_DURUM[td].toLocaleLowerCase("tr")+" olarak işaretlendi":"Eklendi")};
   });
 }
+/* ---------- Etiket okuma (seri no) ----------
+   MEB envanter etiketi: 42.04.118.01.K1.05. Önce QR/barkod, olmazsa yazı (Tesseract.js, cihazda çalışır; fotoğraf hiçbir yere gönderilmez). */
+const SERI_RE=/\d{2}\.\d{2}\.\d{2,3}\.\d{2}\.[A-Z]\d\.\d{2}/,KISA_RE=/\d{2}\.[A-Z]\d\.\d{2}/;
+function seriBul(t){
+  const n=String(t||"").toUpperCase().replace(/[,:;]/g,".").replace(/O/g,"0").replace(/[^0-9A-Z.\n ]/g,"");
+  const satir=n.split("\n").map(l=>l.replace(/\s+/g,""));
+  const tam=satir.concat(n.replace(/\s+/g,""));
+  for(const l of tam){const m=l.match(SERI_RE);if(m)return m[0]}
+  for(const l of satir){const m=l.match(KISA_RE);if(m)return m[0]}
+  return "";
+}
+let tessYuk=null;
+function tessYukle(){return tessYuk||(tessYuk=new Promise((ok,hata)=>{
+  if(window.Tesseract)return ok(window.Tesseract);
+  const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+  sc.onload=()=>ok(window.Tesseract);sc.onerror=()=>{tessYuk=null;hata(new Error("yuklenemedi"))};document.head.appendChild(sc)}))}
+async function etiketOku(file){
+  const bmp=await createImageBitmap(file,{imageOrientation:"from-image"});
+  const k=Math.min(1,1600/Math.max(bmp.width,bmp.height));
+  const c=document.createElement("canvas");c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+  c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+  if("BarcodeDetector" in window){
+    try{const bd=new BarcodeDetector({formats:["qr_code","code_128","code_39"]});
+      for(const b of await bd.detect(c)){const v=seriBul(b.rawValue);if(v)return v}}catch(e){}
+  }
+  const T=await tessYukle(),w=await T.createWorker("eng");
+  try{await w.setParameters({tessedit_char_whitelist:"0123456789.ABCDEFGHIJKLMNOPQRSTUVWXYZ",tessedit_pageseg_mode:"11"});
+    const {data}=await w.recognize(c);return seriBul(data.text)}
+  finally{await w.terminate()}
+}
 function tahtaSheet(id){
   if(!S.okullar.length){okulSheet();return}
   const x=id?S.tahtalar.find(t=>t.id===id):{okul:defOkul(),durum:"calisiyor"};
@@ -808,8 +841,9 @@ function tahtaSheet(id){
    <div class="two"><div class="f"><label for="tOkul">Okul</label><select id="tOkul">${okulOptions(x.okul)}</select></div>
    <div class="f"><label for="tSinif">Sınıf / yer</label><input id="tSinif" placeholder="Ör. 6-A, BT sınıfı" value="${esc(x.sinif||"")}"></div></div>
    <div class="f" id="tKatBox" ${katOkul(x.okul)?"":"hidden"}><label for="tKat">Kat</label><select id="tKat"><option value="">Otomatik (sınıf adından)</option>${Object.entries(KATLAR).map(([k,v])=>`<option value="${k}" ${k===(x.kat||"")?"selected":""}>${v}</option>`).join("")}</select></div>
-   <div class="two"><div class="f"><label for="tMarka">Marka / model</label><input id="tMarka" placeholder="Ör. Vestel 75&quot; Faz-3" value="${esc(x.marka||"")}"></div>
-   <div class="f"><label for="tSeri">Seri no</label><input id="tSeri" class="mono" value="${esc(x.seri||"")}"></div></div>
+   <div class="f"><label for="tMarka">Marka / model</label><input id="tMarka" placeholder="Ör. Vestel 75&quot; Faz-3" value="${esc(x.marka||"")}"></div>
+   <div class="f"><label for="tSeri">Seri no / etiket kodu</label><div class="srow"><input id="tSeri" class="mono" placeholder="Ör. 42.04.118.01.K1.05" value="${esc(x.seri||"")}"><button type="button" class="btn" id="tScanBtn">Etiketi tara</button></div><div class="note" id="tScanNot" hidden style="padding:0"></div></div>
+   <input id="tScan" type="file" accept="image/*" capture="environment" hidden>
    <div class="f"><span class="lb">Güncelleme${x.gTarih?` · son ${esc(trTarih(x.gTarih))}`:""}</span>${seg("gun",{"":"Değişmesin",ok:"Güncel",no:"Güncel değil"},"")}</div>
    <div class="f"><span class="lb">İmaj${x.iTarih?` · son ${esc(trTarih(x.iTarih))}`:""}</span>${seg("imaj",{"":"Değişmesin",ok:"Yeni imaj",no:"Eski imaj"},"")}</div>
    <div class="f"><label for="tNot">Not</label><textarea id="tNot" placeholder="Ör. Sağ hoparlör cızırtılı, kumanda yok">${esc(x.not||"")}</textarea></div>
@@ -819,6 +853,15 @@ function tahtaSheet(id){
   f=>{
     bindSeg(f);
     f.querySelector("#tOkul").addEventListener("change",e=>{f.querySelector("#tKatBox").hidden=!katOkul(e.target.value)});
+    const sb=f.querySelector("#tScanBtn"),sf=f.querySelector("#tScan"),sn=f.querySelector("#tScanNot");
+    sb.onclick=()=>sf.click();
+    sf.onchange=async()=>{const file=sf.files[0];if(!file)return;
+      sb.disabled=true;sn.hidden=false;sn.textContent="Okunuyor… (ilk seferde birkaç saniye sürebilir)";
+      try{const v=await etiketOku(file);
+        if(v){f.querySelector("#tSeri").value=v;sn.textContent="Okundu: "+v+" — kontrol et, yanlışsa düzelt."}
+        else sn.textContent="Okunamadı. Etiketi daha yakından, parlamasız ve düz çek."}
+      catch(e){sn.textContent="Okunamadı (internet gerekli). Elle yazabilirsin."}
+      sb.disabled=false;sf.value=""};
     const bi=f.querySelector("[data-is]");if(bi)bi.onclick=()=>{closeSheet();isSheet(null,id)};
     delConfirm(f,async()=>{if(await remove("tahtalar",id)){closeSheet();toast("Tahta silindi")}});
     f.onsubmit=async e=>{e.preventDefault();
