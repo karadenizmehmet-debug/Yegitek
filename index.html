@@ -175,6 +175,10 @@ textarea{min-height:84px;resize:vertical}
 .chips .lg{flex:none}
 
 /* Board tiles */
+.lg.kt::before{display:none}
+.lg.kt{padding:4px 12px}
+h3.kat{margin:10px 2px 6px;font:700 13px var(--f-body);color:var(--muted);letter-spacing:.02em;text-transform:uppercase;display:flex;gap:6px;align-items:center}
+h3.kat span{font-weight:600}
 .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 @media (max-width:400px){.tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .tile{position:relative;display:flex;flex-direction:column;gap:3px;text-align:left;padding:14px 12px 10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;cursor:pointer;min-width:0;overflow:hidden;box-shadow:var(--shadow)}
@@ -233,7 +237,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.8</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.9</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -256,7 +260,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
     <select id="qOkul" aria-label="Okul"></select>
     <div id="qTahtalar" class="tchips" aria-label="Tahtalar"></div>
     <select id="qTDurum" aria-label="Tahtanın durumu"></select>
-    <button class="btn pri" type="submit">Ekle</button>
+    <div class="btns"><button class="btn" type="button" id="qIptal">Vazgeç</button><button class="btn pri" type="submit">Ekle</button></div>
   </form>
 
   <div class="tools" id="tools" hidden>
@@ -294,7 +298,7 @@ const AY=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","A
 const TABS=["ozet","isler","yap","tahtalar"];
 
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
-const S={okullar:[],tahtalar:[],isler:[],yapilacaklar:[],okul:"",tab:LS.get("yt2_tab")||"ozet",q:"",tf:"",durum:"",ay:"",db:null,
+const S={okullar:[],tahtalar:[],isler:[],yapilacaklar:[],okul:"",tab:LS.get("yt2_tab")||"ozet",q:"",tf:"",kat:"",yapAcik:false,durum:"",ay:"",db:null,
   loaded:{okullar:false,tahtalar:false,isler:false,yapilacaklar:false}};
 if(!TABS.includes(S.tab))S.tab="ozet";
 
@@ -419,6 +423,19 @@ const inOkul=x=>hepsi()||x.okul===S.okul;
 const yIn=x=>hepsi()||!x.okul||x.okul===S.okul;
 const norm=s=>String(s||"").toLocaleLowerCase("tr");
 const sinifSort=(a,b)=>String(a.sinif).localeCompare(String(b.sinif),"tr",{numeric:true});
+/* Kat: tahtada elle seçilmişse o; yoksa sınıf adından tahmin edilir (5-B…8-B → 2, 5-A…8-A → 3, vb.). */
+const KATLAR={"1":"1. kat","2":"2. kat","3":"3. kat"};
+const KAT_SIRA=["1","2","3","0"];
+function katTahmin(sinif){
+  const n=norm(sinif).replace(/\s+/g,"");
+  if(/^[5-8]-?b/.test(n)||n.includes("teknoloji"))return "2";
+  if(/^[5-8]-?a/.test(n)||n.includes("mescid")||n.includes("boşsınıf"))return "3";
+  if(n.includes("konferans")||n.includes("anaokul")||/^m-?[12]$/.test(n)||n.includes("kütüphane")||n.includes("fen"))return "1";
+  return "";
+}
+const katOf=t=>t.kat||katTahmin(t.sinif)||"0";
+const katAd=k=>KATLAR[k]||"Kat belirsiz";
+const katSort=(a,b)=>KAT_SIRA.indexOf(katOf(a))-KAT_SIRA.indexOf(katOf(b))||sinifSort(a,b);
 const sonIs=tid=>S.isler.filter(i=>i.tahta===tid).sort((a,b)=>(b.tarih||"").localeCompare(a.tarih||""))[0];
 const sorunlu=x=>x.durum==="arizali"||x.durum==="serviste";
 const emptyBox=(t,x)=>`<div class="card"><div class="empty"><b>${t}</b>${x}</div></div>`;
@@ -430,7 +447,7 @@ function fixOkul(){
   if(!S.loaded.okullar)return;
   if(S.okul&&!S.okullar.some(o=>o.id===S.okul))S.okul="";
 }
-function okulSec(id){S.okul=id;S.tab="ozet";S.q="";S.tf="";S.durum="";$("#q").value="";render();window.scrollTo(0,0)}
+function okulSec(id){S.okul=id;S.tab="ozet";S.q="";S.tf="";S.kat="";S.durum="";$("#q").value="";render();window.scrollTo(0,0)}
 
 /* ---------- Header / nav ---------- */
 function renderOkulBar(){
@@ -457,10 +474,10 @@ function renderTools(){
   const t=S.tab,has=S.okullar.length>0;
   $("#tools").hidden=t==="ozet"||!has;
   $("#monthNav").hidden=t!=="isler"||!has;
-  $("#quickAdd").hidden=t!=="yap"||!has;
+  $("#quickAdd").hidden=t!=="yap"||!has||!S.yapAcik;
   $("#fDurum").hidden=t!=="isler";
-  $("#fab").hidden=t==="yap"||!S.loaded.okullar;
-  $("#fabT").textContent=t==="tahtalar"?"Tahta ekle":"İş ekle";
+  $("#fab").hidden=!S.loaded.okullar||(t==="yap"&&S.yapAcik);
+  $("#fabT").textContent=t==="tahtalar"?"Tahta ekle":t==="yap"?"Yapılacak ekle":"İş ekle";
   $("#q").placeholder=t==="tahtalar"?"Ara: sınıf, marka, seri no":"Ara: sınıf, açıklama, iş türü";
   const cur=today().slice(0,7);
   $("#mLbl").innerHTML=esc(ayAdi(S.ay))+(S.ay!==cur?`<small>Bu aya dön</small>`:"");
@@ -477,7 +494,7 @@ function fillQuick(){
   fillQTahta();
 }
 function tahtaCheckList(ok,secili=[]){
-  const l=ok?S.tahtalar.filter(t=>t.okul===ok).sort(sinifSort):[];
+  const l=ok?S.tahtalar.filter(t=>t.okul===ok).sort(katSort):[];
   return l.length?l.map(t=>`<label><input type="checkbox" value="${esc(t.id)}" ${secili.includes(t.id)?"checked":""}> ${esc(t.sinif)}</label>`).join(""):`<span class="note">Bu okulda tahta yok</span>`;
 }
 const secilenTahtalar=root=>[...root.querySelectorAll("input[type=checkbox]:checked")].map(i=>i.value);
@@ -566,7 +583,7 @@ function renderOzet(){
   const dikkat=t.filter(x=>x.durum!=="calisiyor"&&x.durum!=="kullanim").sort((a,b)=>T_ORDER.indexOf(a.durum)-T_ORDER.indexOf(b.durum)||sinifSort(a,b));
   if(dikkat.length)h+=`<h2 class="sec">Dikkat isteyen tahtalar <span>${dikkat.length}</span></h2><div class="card list">${dikkat.slice(0,6).map(x=>tahtaRow(x,hepsi())).join("")}${dikkat.length>6?`<button class="more" type="button" data-go="tahtalar" data-tf="">Tümünü gör</button>`:""}</div>`;
   const bekRows=[...yBek.map(x=>todoRow(x,{noDel:true})),...iAcik.map(x=>isRow(x,true))];
-  h+=`<h2 class="sec">Bekleyenler <button class="lnk" type="button" data-go="yap">+ Yapılacak ekle</button></h2><div class="card list">${bekRows.length?bekRows.slice(0,6).join(""):`<div class="note">Bekleyen iş yok.</div>`}${bekRows.length>6?`<button class="more" type="button" data-go="yap">${bekRows.length-6} tane daha</button>`:""}</div>`;
+  h+=`<h2 class="sec">Bekleyenler <button class="lnk" type="button" data-yapac="1">+ Yapılacak ekle</button></h2><div class="card list">${bekRows.length?bekRows.slice(0,6).join(""):`<div class="note">Bekleyen iş yok.</div>`}${bekRows.length>6?`<button class="more" type="button" data-go="yap">${bekRows.length-6} tane daha</button>`:""}</div>`;
   const son=[...S.isler.filter(inOkul).filter(x=>x.durum==="tamam").map(x=>({d:x.tarih||"",o:x.olusturma||0,h:isRow(x,true)})),
     ...S.yapilacaklar.filter(yIn).filter(x=>x.tamam).map(x=>({d:x.bitis||"",o:x.olusturma||0,h:doneTodoRow(x,true)}))]
     .sort((a,b)=>b.d.localeCompare(a.d)||b.o-a.o).slice(0,5);
@@ -595,7 +612,7 @@ function renderYap(){
   const ay=today().slice(0,7);
   const bit=all.filter(x=>x.tamam&&(x.bitis||"").startsWith(ay)).sort((a,b)=>(b.bitis||"").localeCompare(a.bitis||""));
   let h=tahtaAra();
-  h+=`<h2 class="sec">Yapılacak <span>${bek.length}</span></h2><div class="card list">${bek.length?bek.map(x=>todoRow(x)).join(""):`<div class="note">${S.yapilacaklar.length?"Bekleyen iş yok.":"Yukarıya yazıp “Ekle”ye bas; işi yaptığında kutuyu tikle."}</div>`}</div>`;
+  h+=`<h2 class="sec">Yapılacak <span>${bek.length}</span></h2><div class="card list">${bek.length?bek.map(x=>todoRow(x)).join(""):`<div class="note">${S.yapilacaklar.length?"Bekleyen iş yok.":"Sağ alttaki “Yapılacak ekle”ye bas, yaz; işi yaptığında kutuyu tikle."}</div>`}</div>`;
   if(bit.length)h+=`<h2 class="sec">Bu ay tiklenenler <span>${bit.length}</span></h2><div class="card list">${bit.slice(0,8).map(x=>todoRow(x)).join("")}</div>`;
   h+=`<div class="note" style="padding:2px 8px">Tiklediğin notlar “Yapılanlar” sekmesinde, yapıldığı günün altında görünür.</div>`;
   return h;
@@ -604,15 +621,21 @@ function renderTahtalar(){
   const q=norm(S.q);
   const base=S.tahtalar.filter(inOkul);
   const c={};base.forEach(x=>c[x.durum]=(c[x.durum]||0)+1);
-  const list=base.filter(x=>!S.tf||x.durum===S.tf||(S.tf==="arizali"&&x.durum==="serviste")).filter(x=>!q||norm([x.sinif,x.marka,x.seri,x.not].join(" ")).includes(q));
+  const kc={};base.forEach(x=>{const k=katOf(x);kc[k]=(kc[k]||0)+1});
+  if(S.kat&&!kc[S.kat])S.kat="";
+  const list=base.filter(x=>!S.tf||x.durum===S.tf||(S.tf==="arizali"&&x.durum==="serviste")).filter(x=>!S.kat||katOf(x)===S.kat).filter(x=>!q||norm([x.sinif,x.marka,x.seri,x.not].join(" ")).includes(q));
   let h=`<div class="chips" role="group" aria-label="Duruma göre süz"><button type="button" class="lg" data-tf="" aria-pressed="${!S.tf}">Tümü <b>${base.length}</b></button>${T_ORDER.filter(k=>c[k]).map(k=>`<button type="button" class="lg s-${k}" data-tf="${k}" aria-pressed="${S.tf===k}">${TAHTA_DURUM[k]} <b>${c[k]}</b></button>`).join("")}</div>`;
+  if(KAT_SIRA.some(k=>kc[k])&&Object.keys(kc).length>0)h+=`<div class="chips" role="group" aria-label="Kata göre süz"><button type="button" class="lg kt" data-kat="" aria-pressed="${!S.kat}">Tüm katlar</button>${KAT_SIRA.filter(k=>kc[k]).map(k=>`<button type="button" class="lg kt" data-kat="${k}" aria-pressed="${S.kat===k}">${katAd(k)} <b>${kc[k]}</b></button>`).join("")}</div>`;
   if(!base.length)return h+emptyBox("Henüz tahta eklenmedi","Sağ alttaki “Tahta ekle” ile sınıfı, markayı ve seri numarasını kaydet.");
   if(!list.length)return h+emptyBox("Eşleşen tahta yok","Aramayı veya durum süzgecini değiştir.");
   const ids=hepsi()?S.okullar.map(o=>o.id):[S.okul];
   h+=ids.map(oid=>{
-    const l=list.filter(x=>x.okul===oid).sort(sinifSort);if(!l.length)return "";
-    return `${hepsi()?`<h2 class="sec">${esc(okulAd(oid))} <span>${l.length}</span></h2>`:""}<div class="tgrid">${l.map(x=>{const s=sonIs(x.id);
-      return `<button class="tile s-${esc(x.durum)}" type="button" data-tahta="${esc(x.id)}"><span class="ts">${esc(x.sinif||"?")}</span><span class="tm">${esc(x.marka||"Marka girilmedi")}</span><span class="tf"><span class="pill">${TAHTA_DURUM[x.durum]||""}</span><span class="mono">${s?esc(kisaTarih(s.tarih)):""}</span></span></button>`}).join("")}</div>`}).join("");
+    const l=list.filter(x=>x.okul===oid).sort(katSort);if(!l.length)return "";
+    const tile=x=>{const s=sonIs(x.id);
+      return `<button class="tile s-${esc(x.durum)}" type="button" data-tahta="${esc(x.id)}"><span class="ts">${esc(x.sinif||"?")}</span><span class="tm">${esc(x.marka||"Marka girilmedi")}</span><span class="tf"><span class="pill">${TAHTA_DURUM[x.durum]||""}</span><span class="mono">${s?esc(kisaTarih(s.tarih)):""}</span></span></button>`};
+    const gruplar=KAT_SIRA.map(k=>({k,l:l.filter(x=>katOf(x)===k)})).filter(g=>g.l.length);
+    const kBaslik=gruplar.length>1||S.kat;
+    return `${hepsi()?`<h2 class="sec">${esc(okulAd(oid))} <span>${l.length}</span></h2>`:""}${gruplar.map(g=>`${kBaslik?`<h3 class="kat">${esc(katAd(g.k))} <span>${g.l.length}</span></h3>`:""}<div class="tgrid">${g.l.map(tile).join("")}</div>`).join("")}`}).join("");
   return h;
 }
 function render(){
@@ -723,6 +746,7 @@ function tahtaSheet(id){
    <div class="f"><span class="lb">Durum</span>${seg("durum",TAHTA_DURUM,x.durum,true)}</div>
    <div class="two"><div class="f"><label for="tOkul">Okul</label><select id="tOkul">${okulOptions(x.okul)}</select></div>
    <div class="f"><label for="tSinif">Sınıf / yer</label><input id="tSinif" placeholder="Ör. 6-A, BT sınıfı" value="${esc(x.sinif||"")}"></div></div>
+   <div class="f"><label for="tKat">Kat</label><select id="tKat"><option value="">Otomatik (sınıf adından)</option>${Object.entries(KATLAR).map(([k,v])=>`<option value="${k}" ${k===(x.kat||"")?"selected":""}>${v}</option>`).join("")}</select></div>
    <div class="two"><div class="f"><label for="tMarka">Marka / model</label><input id="tMarka" placeholder="Ör. Vestel 75&quot; Faz-3" value="${esc(x.marka||"")}"></div>
    <div class="f"><label for="tSeri">Seri no</label><input id="tSeri" class="mono" value="${esc(x.seri||"")}"></div></div>
    <div class="f"><label for="tNot">Not</label><textarea id="tNot" placeholder="Ör. Sağ hoparlör cızırtılı, kumanda yok">${esc(x.not||"")}</textarea></div>
@@ -735,7 +759,7 @@ function tahtaSheet(id){
     delConfirm(f,async()=>{if(await remove("tahtalar",id)){closeSheet();toast("Tahta silindi")}});
     f.onsubmit=async e=>{e.preventDefault();
       const sinif=f.tSinif.value.trim();if(!sinif){f.tSinif.focus();toast("Sınıf / yer adını yaz");return}
-      const d={okul:f.tOkul.value,sinif,marka:f.tMarka.value.trim(),seri:f.tSeri.value.trim(),durum:segVal(f,"durum")||"calisiyor",not:f.tNot.value.trim()};
+      const d={okul:f.tOkul.value,sinif,marka:f.tMarka.value.trim(),seri:f.tSeri.value.trim(),durum:segVal(f,"durum")||"calisiyor",kat:f.tKat.value,not:f.tNot.value.trim()};
       if(await save("tahtalar",id,d)){closeSheet();toast("Tahta kaydedildi")}};
   });
 }
@@ -814,7 +838,8 @@ function okulSheet(){
 }
 
 /* ---------- Events ---------- */
-function goTab(t){S.tab=t;S.q="";$("#q").value="";LS.set("yt2_tab",t);render();window.scrollTo(0,0)}
+function yapAc(){if(S.tab!=="yap")goTab("yap");S.yapAcik=true;render();window.scrollTo(0,0);setTimeout(()=>$("#qMetin").focus(),0)}
+function goTab(t){S.tab=t;S.yapAcik=false;S.q="";$("#q").value="";LS.set("yt2_tab",t);render();window.scrollTo(0,0)}
 $("#tabbar").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(b)goTab(b.dataset.tab)});
 $("#okulBar").addEventListener("click",e=>{if(e.target.closest("[data-degis]")){S.okul="";render();window.scrollTo(0,0)}});
 $("#btnOkullar").onclick=okulSheet;
@@ -823,6 +848,7 @@ $("#mPrev").onclick=()=>{S.ay=ayKaydir(S.ay,-1);render()};
 $("#mNext").onclick=()=>{const c=today().slice(0,7);if(S.ay<c){S.ay=ayKaydir(S.ay,1);render()}};
 $("#mLbl").onclick=()=>{S.ay=today().slice(0,7);render()};
 $("#qOkul").addEventListener("change",fillQTahta);
+$("#qIptal").onclick=()=>{S.yapAcik=false;render()};
 $("#qTahtalar").addEventListener("change",fillQTDurum);
 $("#quickAdd").addEventListener("submit",async e=>{e.preventDefault();
   const inp=$("#qMetin"),metin=inp.value.trim();if(!metin){inp.focus();return}
@@ -833,10 +859,11 @@ $("#quickAdd").addEventListener("submit",async e=>{e.preventDefault();
   if(td)for(const tid of tids)await save("tahtalar",tid,{durum:td});
   inp.value="";$("#qAyrinti").value="";$("#qTDurum").value="";
   $("#qTahtalar").querySelectorAll("input").forEach(i=>i.checked=false);fillQTDurum();inp.focus();
+  S.yapAcik=false;render();
   toast(tids.length&&td?"Eklendi, "+tids.length+" tahta "+TAHTA_DURUM[td].toLocaleLowerCase("tr")+" olarak işaretlendi":"Eklendi")});
 $("#q").addEventListener("input",e=>{S.q=e.target.value;render()});
 $("#fDurum").addEventListener("change",e=>{S.durum=e.target.value;render()});
-$("#fab").onclick=()=>S.tab==="tahtalar"?tahtaSheet(null):isSheet(null);
+$("#fab").onclick=()=>S.tab==="tahtalar"?tahtaSheet(null):S.tab==="yap"?yapAc():isSheet(null);
 $("#view").addEventListener("click",async e=>{
   if(e.target.closest("#ilkOkul")){okulSheet();return}
   if(e.target.closest("#ilkBag")){baglantiSheet();return}
@@ -867,7 +894,9 @@ $("#view").addEventListener("click",async e=>{
   if(d){if(d.dataset.sure){if(await remove("yapilacaklar",d.dataset.del))toast("Not silindi")}else{d.dataset.sure=1;d.textContent="Emin misin?";setTimeout(()=>{if(d.isConnected){delete d.dataset.sure;d.textContent="Sil"}},3000)}return}
   const td=e.target.closest("[data-todo]");if(td){todoSheet(td.dataset.todo);return}
   const o=e.target.closest("[data-o]");if(o){okulSec(o.dataset.o);return}
+  if(e.target.closest("[data-yapac]")){yapAc();return}
   const g=e.target.closest("[data-go]");if(g){if(g.dataset.tf!==undefined)S.tf=g.dataset.tf;goTab(g.dataset.go);return}
+  const kt=e.target.closest("[data-kat]");if(kt){S.kat=kt.dataset.kat;render();return}
   const tf=e.target.closest("[data-tf]");if(tf){S.tf=tf.dataset.tf;render();return}
   if(e.target.closest("[data-liste]")){listeSheet();return}
   const r=e.target.closest("[data-is],[data-tahta]");if(!r)return;
