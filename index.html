@@ -237,7 +237,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.11</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.12</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -427,11 +427,12 @@ const sinifSort=(a,b)=>String(a.sinif).localeCompare(String(b.sinif),"tr",{numer
 const KATLAR={"g":"Giriş katı","1":"1. kat","2":"2. kat","3":"3. kat"};
 const KAT_SIRA=["g","1","2","3","0"];
 function katTahmin(sinif){
-  const n=norm(sinif).replace(/\s+/g,"");
+  /* Aksan/ı-i/ş-s farkı ve boşluklar yok sayılır: "Kız Mescidi", "KIZ MESCİT", "Ana sınıfı" hepsi eşleşir. */
+  const n=String(sinif||"").toLocaleLowerCase("tr").replace(/ı/g,"i").replace(/ş/g,"s").replace(/ç/g,"c").replace(/ğ/g,"g").replace(/ö/g,"o").replace(/ü/g,"u").replace(/[^a-z0-9-]/g,"");
   if(/^[5-8]-?b/.test(n)||n.includes("teknoloji"))return "2";
-  if(/^[5-8]-?a/.test(n)||n.includes("mescid")||n.includes("boşsınıf"))return "3";
-  if(n.includes("konferans")||n.includes("anaokul")||n.includes("giriş"))return "g";
-  if(/^m-?[12]$/.test(n)||n.includes("kütüphane")||n.includes("fen"))return "1";
+  if(/^[5-8]-?a/.test(n)||n.includes("mescit")||n.includes("mescid")||n.includes("bossinif"))return "3";
+  if(n.includes("konferans")||n.includes("anaokul")||n.includes("anasinif")||n.includes("giris"))return "g";
+  if(/^m-?[12]$/.test(n)||n.includes("kutuphane")||n.includes("fen"))return "1";
   return "";
 }
 /* Kat düzeni yalnızca Şehit Coşkun okulunda geçerli. */
