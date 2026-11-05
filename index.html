@@ -237,7 +237,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.10</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.11</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -424,13 +424,14 @@ const yIn=x=>hepsi()||!x.okul||x.okul===S.okul;
 const norm=s=>String(s||"").toLocaleLowerCase("tr");
 const sinifSort=(a,b)=>String(a.sinif).localeCompare(String(b.sinif),"tr",{numeric:true});
 /* Kat: tahtada elle seçilmişse o; yoksa sınıf adından tahmin edilir (5-B…8-B → 2, 5-A…8-A → 3, vb.). */
-const KATLAR={"1":"1. kat","2":"2. kat","3":"3. kat"};
-const KAT_SIRA=["1","2","3","0"];
+const KATLAR={"g":"Giriş katı","1":"1. kat","2":"2. kat","3":"3. kat"};
+const KAT_SIRA=["g","1","2","3","0"];
 function katTahmin(sinif){
   const n=norm(sinif).replace(/\s+/g,"");
   if(/^[5-8]-?b/.test(n)||n.includes("teknoloji"))return "2";
   if(/^[5-8]-?a/.test(n)||n.includes("mescid")||n.includes("boşsınıf"))return "3";
-  if(n.includes("konferans")||n.includes("anaokul")||/^m-?[12]$/.test(n)||n.includes("kütüphane")||n.includes("fen"))return "1";
+  if(n.includes("konferans")||n.includes("anaokul")||n.includes("giriş"))return "g";
+  if(/^m-?[12]$/.test(n)||n.includes("kütüphane")||n.includes("fen"))return "1";
   return "";
 }
 /* Kat düzeni yalnızca Şehit Coşkun okulunda geçerli. */
