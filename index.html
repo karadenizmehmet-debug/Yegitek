@@ -267,7 +267,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.20</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.21</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -436,6 +436,9 @@ const gunBaslik=d=>{const [y,m,g]=d.split("-").map(Number);if(!y)return "Tarihsi
 const kisaTarih=d=>{if(!d)return "";const [,m,g]=d.split("-");return +g+" "+AY[+m-1]};
 const trTarih=d=>{if(!d)return "";const [y,m,g]=d.split("-");return `${g}.${m}.${y}`};
 const okulAd=id=>(S.okullar.find(o=>o.id===id)||{}).ad||"—";
+/* Uzun okul adı iki satıra bölünürse: üstte ad, altta "İmam Hatip Ortaokulu" */
+const okulHtml=ad=>{const m=String(ad||"").match(/^(.+?)\s+((?:İmam Hatip|Imam Hatip|Anadolu)\s.+|Ortaokulu|İlkokulu|Lisesi)$/i);
+  return m?`<span>${esc(m[1])}</span> <span style="display:inline-block;white-space:nowrap">${esc(m[2])}</span>`:esc(ad||"")};
 const okulKisa=id=>{const o=S.okullar.find(o=>o.id===id);return o?(o.kisa||o.ad):"Genel"};
 const tahtaById=id=>S.tahtalar.find(t=>t.id===id);
 /* Yapılacak notu: tahtalar dizisi; eski kayıtlarda tek tahta `tahta` alanında. Birden fazla tahta varsa her tahta ayrı tikli (tdone). */
@@ -533,13 +536,13 @@ function renderOkulBar(){
   if(!S.okul){el.hidden=true;el.innerHTML="";return}
   el.hidden=false;
   const o=S.okullar.find(x=>x.id===S.okul)||{};
-  el.innerHTML=`<div class="curbar"><b>${esc(o.ad||"")}</b><button class="hb" type="button" data-degis>Okul değiştir</button></div>`;
+  el.innerHTML=`<div class="curbar"><b>${okulHtml(o.ad)}</b><button class="hb" type="button" data-degis>Okul değiştir</button></div>`;
 }
 function renderPicker(){
   return `<div class="picker"><h2 class="ph">Bugün hangi okuldasın?</h2>${S.okullar.map(o=>{
     const tt=S.tahtalar.filter(x=>x.okul===o.id),ar=tt.filter(sorunlu).length;
     const bk=S.isler.filter(x=>x.okul===o.id&&x.durum!=="tamam").length+S.yapilacaklar.filter(x=>x.okul===o.id&&!x.tamam&&!x.pys).length;
-    return `<button class="card pick" type="button" data-o="${esc(o.id)}"><span class="n">${esc(o.ad)}</span><span class="go" aria-hidden="true">›</span>${tt.length?bar(tt).html:""}<span class="s">${tt.length} tahta${ar?` · <b>${ar} arızalı</b>`:""}${bk?` · ${bk} bekleyen iş`:""}</span></button>`}).join("")}</div>`;
+    return `<button class="card pick" type="button" data-o="${esc(o.id)}"><span class="n">${okulHtml(o.ad)}</span><span class="go" aria-hidden="true">›</span>${tt.length?bar(tt).html:""}<span class="s">${tt.length} tahta${ar?` · <b>${ar} arızalı</b>`:""}${bk?` · ${bk} bekleyen iş`:""}</span></button>`}).join("")}</div>`;
 }
 function renderNav(){
   document.querySelectorAll(".tb").forEach(b=>{if(b.dataset.tab===S.tab)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
@@ -633,7 +636,7 @@ function renderOzet(){
     h+=`<h2 class="sec">Okullar</h2><div class="okulgrid">${S.okullar.map(o=>{
       const tt=S.tahtalar.filter(x=>x.okul===o.id),ar=tt.filter(sorunlu).length;
       const bk=S.isler.filter(x=>x.okul===o.id&&x.durum!=="tamam").length+S.yapilacaklar.filter(x=>x.okul===o.id&&!x.tamam&&!x.pys).length;
-      return `<button class="card ok-card" type="button" data-o="${esc(o.id)}"><span class="n">${esc(o.ad)}</span>${bar(tt).html}<span class="s">${tt.length} tahta${ar?` · <b style="color:var(--bad)">${ar} arızalı</b>`:""}${bk?` · ${bk} bekleyen`:""}</span></button>`}).join("")}</div>`;
+      return `<button class="card ok-card" type="button" data-o="${esc(o.id)}"><span class="n">${okulHtml(o.ad)}</span>${bar(tt).html}<span class="s">${tt.length} tahta${ar?` · <b style="color:var(--bad)">${ar} arızalı</b>`:""}${bk?` · ${bk} bekleyen`:""}</span></button>`}).join("")}</div>`;
   }
   h+=`<div class="stats">
     <button class="card stat" type="button" data-go="tahtalar" data-tf=""><b>${t.length}</b><small>Tahta</small></button>
