@@ -167,6 +167,19 @@ h2.sec .lnk{font:600 13px var(--f-body);letter-spacing:0;text-transform:none;col
 .tg .tchips label:has(input:checked){background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:800;box-shadow:inset 0 0 0 1px var(--accent)}
 .todo .ayr{color:var(--muted);font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:3px}
 .todo .m{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+
+/* Sabit boy satırlar: uzun metin kısalır, tamamı dokununca/üzerine gelince */
+.row,.todo{height:84px;box-sizing:border-box;overflow:hidden}
+.row br{display:none}
+.row>span:not(.pill):not(.date):not(.cls),.todo>div[data-todo]{min-width:0;overflow:hidden}
+.row .t,.todo .t{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .m{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.row .rz{display:none}
+.todo .m{flex-wrap:nowrap;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.todo .m>*{margin-right:8px}
+.todo .ayr{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;margin-top:1px}
+.todo .tsubs{flex-wrap:nowrap;overflow-x:auto;margin-top:4px;padding-bottom:2px}
+.todo .tsub{white-space:nowrap;flex:none;padding:2px 9px}
 .x{background:none;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:6px 8px;border-radius:6px;white-space:nowrap}
 .x[data-sure]{color:var(--bad);background:var(--bad-soft)}
 
@@ -254,7 +267,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.18</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.19</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -565,21 +578,21 @@ function bar(list){
 }
 function tahtaRow(x,withOkul){
   const son=sonIs(x.id);
-  return `<button class="row" type="button" data-tahta="${esc(x.id)}">
+  return `<button class="row" type="button" data-tahta="${esc(x.id)}" title="${esc([x.sinif,x.marka,x.not].filter(Boolean).join(" · "))}">
     <span class="cls">${esc(x.sinif||"?")}</span>
     <span><span class="t">${esc(x.marka||"Marka girilmedi")}</span><br><span class="m">${withOkul?esc(okulKisa(x.okul))+" · ":""}${x.not?esc(x.not):son?"Son iş "+esc(kisaTarih(son.tarih)):"İş kaydı yok"}</span>${rozetler(x).length?`<span class="rz">${rozetler(x).map(r=>`<span class="pill w">${r}</span>`).join("")}</span>`:""}</span>
     <span class="pill s-${esc(x.durum)}">${TAHTA_DURUM[x.durum]||""}</span></button>`;
 }
 function isRow(x,withDate){
   const t=tahtaById(x.tahta);const [,m,d]=(x.tarih||"--").split("-");
-  return `<button class="row${withDate?"":" nl"}" type="button" data-is="${esc(x.id)}">
+  return `<button class="row${withDate?"":" nl"}" type="button" data-is="${esc(x.id)}" title="${esc([x.tur,t&&t.sinif,x.aciklama].filter(Boolean).join(" · "))}">
     ${withDate?`<span class="date"><b>${esc(d?+d:"")}</b>${m?AY[+m-1]:""}</span>`:""}
     <span><span class="t">${esc(x.tur||"İş")}${t?` · ${esc(t.sinif)}`:""}</span><br><span class="m">${hepsi()?esc(okulKisa(x.okul))+" — ":""}${esc(x.aciklama||"Açıklama yok")}</span></span>
     <span class="pill p-${esc(x.durum)}">${IS_DURUM[x.durum]||""}</span></button>`;
 }
 function doneTodoRow(x,withDate){
   const ad=tahtaAdlari(x);const [,m,d]=(x.bitis||"--").split("-");
-  return `<button class="row${withDate?"":" nl"}" type="button" data-undo="${esc(x.id)}">
+  return `<button class="row${withDate?"":" nl"}" type="button" data-undo="${esc(x.id)}" title="${esc([x.tur,x.metin,ad,x.ayrinti].filter(Boolean).join(" · "))}">
     ${withDate?`<span class="date"><b>${esc(d?+d:"")}</b>${m?AY[+m-1]:""}</span>`:""}
     <span><span class="t">${x.tur?esc(x.tur)+" · ":""}${esc(x.metin)}${ad?` · ${esc(ad)}`:""}</span><br><span class="m">${hepsi()?esc(okulKisa(x.okul))+" — ":""}${[girilen(x)?"Girilen "+esc(girilen(x)):"",d?"Yapıldı "+(+d)+" "+AY[+m-1]:""].filter(Boolean).join(" · ")}${x.ayrinti?" — "+esc(x.ayrinti):""}</span></span>
     <span class="pill p-tamam">Tamamlandı</span></button>`;
@@ -592,7 +605,7 @@ function todoRow(x,opts={}){
   const subs=ids.length>1&&!opts.label?`<div class="tsubs">${ids.map(i=>{const dn=tahtaDone(x,i),tb=tahtaById(i);return `<button class="tsub${dn?" on":""}" type="button" aria-pressed="${dn}" data-tsub="${esc(i)}" data-note="${esc(x.id)}">${dn?"✓ ":""}${esc(tb?tb.sinif:"Silinmiş tahta")}</button>`}).join("")}</div>`:"";
   return `<div class="todo">
     <button class="chk" type="button" role="checkbox" aria-checked="${!!x.tamam}" aria-label="${x.tamam?"Tiki kaldır":"Yapıldı olarak işaretle"}" data-chk="${esc(x.id)}">${x.tamam?"✓":""}</button>
-    <div style="min-width:0" data-todo="${esc(x.id)}"><div class="t"${opts.label?' style="font-weight:600"':""}>${opts.label?"Yapılacak not"+(tt?" · "+esc(tt.sinif):""):esc(x.metin)}</div><div class="m">${opts.label?esc(x.metin):""}${!opts.label&&meta?`<span>${meta}</span>`:""}${pill}</div>${x.ayrinti?`<div class="ayr">${esc(x.ayrinti)}</div>`:""}${subs}</div>
+    <div style="min-width:0" data-todo="${esc(x.id)}" title="${esc([x.tur,x.metin,x.ayrinti].filter(Boolean).join(" · "))}"><div class="t"${opts.label?' style="font-weight:600"':""}>${opts.label?"Yapılacak not"+(tt?" · "+esc(tt.sinif):""):esc(x.metin)}</div><div class="m">${opts.label?esc(x.metin):""}${!opts.label&&meta?`<span>${meta}</span>`:""}${pill}</div>${x.ayrinti?`<div class="ayr">${esc(x.ayrinti)}</div>`:""}${subs}</div>
     ${opts.noDel?"":`<button class="x" type="button" data-del="${esc(x.id)}">Sil</button>`}</div>`;
 }
 function tahtaAra(){
