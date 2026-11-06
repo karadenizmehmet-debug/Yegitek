@@ -222,7 +222,7 @@ h3.kat span{font-weight:600}
 
 /* Tab bar + FAB */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
-.tabbar-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabbar-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
 .tb{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 8px;background:none;border:0;cursor:pointer;color:var(--muted);font-size:11.5px;font-weight:600}
 .tb svg{width:22px;height:22px}
 .tb[aria-current="page"]{color:var(--accent)}
@@ -267,7 +267,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.19</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.20</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
@@ -305,6 +305,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
     <button class="tb" type="button" data-tab="ozet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>Özet</button>
     <button class="tb" type="button" data-tab="isler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.3 1.3L7 5M3.5 12l1.3 1.3L7 11M3.5 18l1.3 1.3L7 17"/></svg>Yapılanlar<span class="bd" id="bdIs" hidden></span></button>
     <button class="tb" type="button" data-tab="yap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3.5"/><path d="M8.5 12h7M12 8.5v7"/></svg>Yapılacak<span class="bd w" id="bdYap" hidden></span></button>
+    <button class="tb" type="button" data-tab="ariza"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.4v.1"/></svg>Arızalı<span class="bd" id="bdAriza" hidden></span></button>
     <button class="tb" type="button" data-tab="tahtalar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="2.5" y="4" width="19" height="12.5" rx="1.8"/><path d="M9 20.5h6M12 16.5v4"/></svg>Tahtalar<span class="bd" id="bdTahta" hidden></span></button>
   </div>
 </nav>
@@ -318,7 +319,7 @@ const IS_TUR=["Arıza giderme","Güncelleme","İmaj","Kurulum","Kalem / dokunmat
 const TUR_G="Güncelleme",TUR_I="İmaj";
 const AY_UZUN=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const AY=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
-const TABS=["ozet","isler","yap","tahtalar"];
+const TABS=["ozet","isler","yap","ariza","tahtalar"];
 
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const S={okullar:[],tahtalar:[],isler:[],yapilacaklar:[],ayarlar:[],okul:"",tab:LS.get("yt2_tab")||"ozet",q:"",tf:"",gf:"",kat:"",durum:"",ay:"",db:null,
@@ -444,6 +445,7 @@ const tahtaAdlari=x=>tahtaIds(x).map(i=>(tahtaById(i)||{}).sinif||"Silinmiş tah
 const hepsi=()=>S.okul==="hepsi";
 const inOkul=x=>hepsi()||x.okul===S.okul;
 const yIn=x=>hepsi()||!x.okul||x.okul===S.okul;
+const pysAcik=x=>!!x.pys&&!x.tamam;
 const norm=s=>String(s||"").toLocaleLowerCase("tr");
 const sinifSort=(a,b)=>String(a.sinif).localeCompare(String(b.sinif),"tr",{numeric:true});
 /* Kat: tahtada elle seçilmişse o; yoksa sınıf adından tahmin edilir (5-B…8-B → 2, 5-A…8-A → 3, vb.). */
@@ -536,14 +538,15 @@ function renderOkulBar(){
 function renderPicker(){
   return `<div class="picker"><h2 class="ph">Bugün hangi okuldasın?</h2>${S.okullar.map(o=>{
     const tt=S.tahtalar.filter(x=>x.okul===o.id),ar=tt.filter(sorunlu).length;
-    const bk=S.isler.filter(x=>x.okul===o.id&&x.durum!=="tamam").length+S.yapilacaklar.filter(x=>x.okul===o.id&&!x.tamam).length;
+    const bk=S.isler.filter(x=>x.okul===o.id&&x.durum!=="tamam").length+S.yapilacaklar.filter(x=>x.okul===o.id&&!x.tamam&&!x.pys).length;
     return `<button class="card pick" type="button" data-o="${esc(o.id)}"><span class="n">${esc(o.ad)}</span><span class="go" aria-hidden="true">›</span>${tt.length?bar(tt).html:""}<span class="s">${tt.length} tahta${ar?` · <b>${ar} arızalı</b>`:""}${bk?` · ${bk} bekleyen iş`:""}</span></button>`}).join("")}</div>`;
 }
 function renderNav(){
   document.querySelectorAll(".tb").forEach(b=>{if(b.dataset.tab===S.tab)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
   const badge=(id,n)=>{const e=$(id);e.hidden=!n;e.textContent=n>99?"99+":n};
   badge("#bdTahta",S.tahtalar.filter(inOkul).filter(sorunlu).length);
-  badge("#bdYap",S.yapilacaklar.filter(yIn).filter(x=>!x.tamam).length);
+  badge("#bdYap",S.yapilacaklar.filter(yIn).filter(x=>!x.tamam&&!x.pys).length);
+  badge("#bdAriza",S.yapilacaklar.filter(yIn).filter(pysAcik).length);
   badge("#bdIs",S.isler.filter(inOkul).filter(x=>x.durum==="acik").length);
 }
 function renderTools(){
@@ -552,7 +555,7 @@ function renderTools(){
   $("#monthNav").hidden=t!=="isler"||!has;
   $("#fDurum").hidden=t!=="isler";
   $("#fab").hidden=!S.loaded.okullar;
-  $("#fabT").textContent=t==="tahtalar"?"Tahta ekle":t==="yap"?"Yapılacak ekle":"İş ekle";
+  $("#fabT").textContent=t==="tahtalar"?"Tahta ekle":t==="yap"?"Yapılacak ekle":t==="ariza"?"Arıza ekle":"İş ekle";
   $("#q").placeholder=t==="tahtalar"?"Ara: sınıf, marka, seri no":"Ara: sınıf, açıklama, iş türü";
   const cur=today().slice(0,7);
   $("#mLbl").innerHTML=esc(ayAdi(S.ay))+(S.ay!==cur?`<small>Bu aya dön</small>`:"");
@@ -592,9 +595,9 @@ function isRow(x,withDate){
 }
 function doneTodoRow(x,withDate){
   const ad=tahtaAdlari(x);const [,m,d]=(x.bitis||"--").split("-");
-  return `<button class="row${withDate?"":" nl"}" type="button" data-undo="${esc(x.id)}" title="${esc([x.tur,x.metin,ad,x.ayrinti].filter(Boolean).join(" · "))}">
+  return `<button class="row${withDate?"":" nl"}" type="button" data-undo="${esc(x.id)}" title="${esc([x.tur,x.metin,ad,x.ayrinti,x.sonuc&&"Yapılan: "+x.sonuc].filter(Boolean).join(" · "))}">
     ${withDate?`<span class="date"><b>${esc(d?+d:"")}</b>${m?AY[+m-1]:""}</span>`:""}
-    <span><span class="t">${x.tur?esc(x.tur)+" · ":""}${esc(x.metin)}${ad?` · ${esc(ad)}`:""}</span><br><span class="m">${hepsi()?esc(okulKisa(x.okul))+" — ":""}${[girilen(x)?"Girilen "+esc(girilen(x)):"",d?"Yapıldı "+(+d)+" "+AY[+m-1]:""].filter(Boolean).join(" · ")}${x.ayrinti?" — "+esc(x.ayrinti):""}</span></span>
+    <span><span class="t">${x.tur?esc(x.tur)+" · ":""}${esc(x.metin)}${ad?` · ${esc(ad)}`:""}</span><br><span class="m">${hepsi()?esc(okulKisa(x.okul))+" — ":""}${[girilen(x)?"Girilen "+esc(girilen(x)):"",d?"Yapıldı "+(+d)+" "+AY[+m-1]:""].filter(Boolean).join(" · ")}${x.ayrinti?" — "+esc(x.ayrinti):""}${x.sonuc?" — Yapılan: "+esc(x.sonuc):""}</span></span>
     <span class="pill p-tamam">Tamamlandı</span></button>`;
 }
 function todoRow(x,opts={}){
@@ -619,7 +622,7 @@ function tahtaAra(){
 function renderOzet(){
   const t=S.tahtalar.filter(inOkul);
   const iAcik=S.isler.filter(inOkul).filter(x=>x.durum!=="tamam").sort((a,b)=>(a.tarih||"").localeCompare(b.tarih||""));
-  const yBek=S.yapilacaklar.filter(yIn).filter(x=>!x.tamam).sort((a,b)=>(a.olusturma||0)-(b.olusturma||0));
+  const yBek=S.yapilacaklar.filter(yIn).filter(x=>!x.tamam&&!x.pys).sort((a,b)=>(a.olusturma||0)-(b.olusturma||0));
   const ay=today().slice(0,7);
   const bitIs=S.isler.filter(inOkul).filter(x=>x.durum==="tamam"&&(x.tarih||"").startsWith(ay));
   const bitY=S.yapilacaklar.filter(yIn).filter(x=>x.tamam&&(x.bitis||"").startsWith(ay));
@@ -629,7 +632,7 @@ function renderOzet(){
   if(hepsi()){
     h+=`<h2 class="sec">Okullar</h2><div class="okulgrid">${S.okullar.map(o=>{
       const tt=S.tahtalar.filter(x=>x.okul===o.id),ar=tt.filter(sorunlu).length;
-      const bk=S.isler.filter(x=>x.okul===o.id&&x.durum!=="tamam").length+S.yapilacaklar.filter(x=>x.okul===o.id&&!x.tamam).length;
+      const bk=S.isler.filter(x=>x.okul===o.id&&x.durum!=="tamam").length+S.yapilacaklar.filter(x=>x.okul===o.id&&!x.tamam&&!x.pys).length;
       return `<button class="card ok-card" type="button" data-o="${esc(o.id)}"><span class="n">${esc(o.ad)}</span>${bar(tt).html}<span class="s">${tt.length} tahta${ar?` · <b style="color:var(--bad)">${ar} arızalı</b>`:""}${bk?` · ${bk} bekleyen`:""}</span></button>`}).join("")}</div>`;
   }
   h+=`<div class="stats">
@@ -672,7 +675,7 @@ function renderIsler(){
 }
 function renderYap(){
   const q=norm(S.q);
-  const all=S.yapilacaklar.filter(yIn).filter(x=>{if(!q)return true;return norm([x.metin,x.ayrinti,tahtaAdlari(x),x.okul&&okulAd(x.okul)].join(" ")).includes(q)});
+  const all=S.yapilacaklar.filter(yIn).filter(x=>!x.pys).filter(x=>{if(!q)return true;return norm([x.metin,x.ayrinti,tahtaAdlari(x),x.okul&&okulAd(x.okul)].join(" ")).includes(q)});
   const bek=all.filter(x=>!x.tamam).sort((a,b)=>(a.olusturma||0)-(b.olusturma||0));
   const ay=today().slice(0,7);
   const bit=all.filter(x=>x.tamam&&(x.bitis||"").startsWith(ay)).sort((a,b)=>(b.bitis||"").localeCompare(a.bitis||""));
@@ -680,6 +683,25 @@ function renderYap(){
   h+=`<h2 class="sec">Yapılacak <span>${bek.length}</span></h2><div class="card list">${bek.length?bek.map(x=>todoRow(x)).join(""):`<div class="note">${S.yapilacaklar.length?"Bekleyen iş yok.":"Sağ alttaki “Yapılacak ekle”ye bas, yaz; işi yaptığında kutuyu tikle."}</div>`}</div>`;
   if(bit.length)h+=`<h2 class="sec">Bu ay tiklenenler <span>${bit.length}</span></h2><div class="card list">${bit.slice(0,8).map(x=>todoRow(x)).join("")}</div>`;
   h+=`<div class="note" style="padding:2px 8px">Tiklediğin notlar “Yapılanlar” sekmesinde, yapıldığı günün altında görünür.</div>`;
+  return h;
+}
+function arizaRow(x){
+  const ids=tahtaIds(x),tt=ids.length===1?tahtaById(ids[0]):null;
+  const cls=ids.length>1?ids.length+" tahta":(tt?tt.sinif:"?");
+  const meta=[x.tur,hepsi()||!x.okul?okulKisa(x.okul):"",ids.length>1?tahtaAdlari(x):"",girilen(x)?"PYS "+girilen(x):""].filter(Boolean).map(esc).join(" · ");
+  return `<button class="row" type="button" data-ariza="${esc(x.id)}" title="${esc([x.metin,x.ayrinti].filter(Boolean).join(" — "))}">
+    <span class="cls">${esc(cls)}</span>
+    <span><span class="t">${esc(x.metin)}</span><br><span class="m">${meta}${x.ayrinti?" — "+esc(x.ayrinti):""}</span></span>
+    <span class="pill p-acik">PYS açık</span></button>`;
+}
+function renderAriza(){
+  const q=norm(S.q);
+  const l=S.yapilacaklar.filter(yIn).filter(pysAcik).filter(x=>!q||norm([x.metin,x.ayrinti,x.tur,tahtaAdlari(x)].join(" ")).includes(q)).sort((a,b)=>(a.olusturma||0)-(b.olusturma||0));
+  const pysli=new Set(S.yapilacaklar.filter(pysAcik).flatMap(tahtaIds));
+  const bos=S.tahtalar.filter(inOkul).filter(sorunlu).filter(t=>!pysli.has(t.id)).filter(t=>!q||norm([t.sinif,t.marka,t.seri,t.not].join(" ")).includes(q)).sort(sinifSort);
+  let h=`<h2 class="sec">PYS kaydı açılanlar <span>${l.length}</span></h2><div class="card list">${l.length?l.map(arizaRow).join(""):`<div class="note">Açık PYS kaydı yok. “Yapılacak ekle” formunda “PYS kaydı açıldı” dersen buraya düşer.</div>`}</div>`;
+  if(bos.length)h+=`<h2 class="sec">Arızalı, PYS kaydı yok <span>${bos.length}</span></h2><div class="card list">${bos.map(x=>tahtaRow(x,hepsi())).join("")}</div>`;
+  h+=`<div class="note" style="padding:2px 8px">Kayda dokun, ne yapıldığını yaz, “Yapıldı” de: Yapılanlar'a geçer.</div>`;
   return h;
 }
 function renderTahtalar(){
@@ -713,7 +735,7 @@ function render(){
   if(!D.token&&!S.okullar.length){v.innerHTML=emptyBox("GitHub'a bağlan","Kayıtlar özel <b class=\"mono\">"+esc(GH.repo)+"</b> reposunda duruyor. Görmek ve kaydetmek için erişim anahtarını gir.")+`<div style="display:flex;justify-content:center;margin-top:12px"><button class="btn pri" type="button" id="ilkBag">Bağlan</button></div>`;return}
   if(!S.okullar.length){v.innerHTML=emptyBox("Önce okullarını ekle","Üstteki “Okullar” düğmesiyle sorumlu olduğun okulları gir. Sonra tahta ve iş eklemeye başlayabilirsin.")+`<div style="display:flex;justify-content:center;margin-top:12px"><button class="btn pri" type="button" id="ilkOkul">Okulları gir</button></div>`;return}
   if(!S.okul){v.innerHTML=renderPicker();return}
-  v.innerHTML=`<div class="stack">${S.tab==="ozet"?renderOzet():S.tab==="isler"?renderIsler():S.tab==="yap"?renderYap():renderTahtalar()}</div>`;
+  v.innerHTML=`<div class="stack">${S.tab==="ozet"?renderOzet():S.tab==="isler"?renderIsler():S.tab==="yap"?renderYap():S.tab==="ariza"?renderAriza():renderTahtalar()}</div>`;
 }
 
 /* ---------- Sheets ---------- */
@@ -782,9 +804,9 @@ function isSheet(id,tid){
       closeSheet();toast("İş kaydedildi"+(tids.length>1?" ("+tids.length+" tahta)":""))};
   });
 }
-function todoSheet(id){
+function todoSheet(id,pre){
   if(!S.okullar.length){okulSheet();return}
-  const x=id?S.yapilacaklar.find(y=>y.id===id):{okul:defOkul(),tur:IS_TUR[0],tahtalar:[]};
+  const x=id?S.yapilacaklar.find(y=>y.id===id):{okul:defOkul(),tur:IS_TUR[0],tahtalar:[],pys:!!(pre&&pre.pys)};
   if(!x)return;
   openSheet(`<h3>${id?"Yapılacağı düzenle":"Yeni yapılacak"}</h3>
    <div class="two"><div class="f"><label for="yOkul">Okul</label><select id="yOkul">${okulOptions(x.okul)}</select></div>
@@ -792,6 +814,7 @@ function todoSheet(id){
    <div class="f"><span class="lb">Tahtalar</span><div class="tgs" id="yTahtalar">${tahtaCheckList(x.okul,tahtaIds(x))}</div></div>
    <div class="f"><label for="yMetin">İş</label><input id="yMetin" value="${esc(x.metin||"")}" placeholder="Ör. 7-B kalemini değiştir" autocomplete="off"></div>
    <div class="f"><label for="yAyrinti">Ayrıntı</label><textarea id="yAyrinti" placeholder="Ör. Kalem yedeği dolapta">${esc(x.ayrinti||"")}</textarea></div>
+   <div class="f"><span class="lb">PYS kaydı açıldı mı?</span>${seg("pys",{"":"Hayır","1":"Evet, açıldı"},x.pys?"1":"")}</div>
    ${id?"":`<div class="f"><span class="lb">Tahtanın durumu da değişsin mi?</span>${seg("tdurum",{"":"Değişmesin",...TAHTA_DURUM},"",true)}</div>`}
    <div class="btns">${id?`<button type="button" class="btn del">Sil</button>`:""}<button type="button" class="btn" data-x>Vazgeç</button><button class="btn pri" type="submit">${id?"Kaydet":"Ekle"}</button></div>`,
   f=>{
@@ -801,17 +824,35 @@ function todoSheet(id){
     f.onsubmit=async e=>{e.preventDefault();
       const metin=f.yMetin.value.trim();if(!metin){f.yMetin.focus();toast("İşi yaz");return}
       const tids=secilenTahtalar(f.querySelector("#yTahtalar"));
-      const ortak={metin,ayrinti:f.yAyrinti.value.trim(),okul:f.yOkul.value,tur:f.yTur.value,tahtalar:tids,tahta:""};
+      const pys=segVal(f,"pys")==="1";
+      const ortak={metin,ayrinti:f.yAyrinti.value.trim(),okul:f.yOkul.value,tur:f.yTur.value,tahtalar:tids,tahta:"",pys};
       if(id){
         const tdone=Object.fromEntries(tids.filter(i=>tahtaDone(x,i)).map(i=>[i,x.tdone&&x.tdone[i]||today()]));
         const tamam=tids.length>1?tids.every(i=>tdone[i]):!!x.tamam;
-        if(await save("yapilacaklar",id,{...ortak,tdone,tamam})){closeSheet();toast("Yapılacak güncellendi")}
+        if(await save("yapilacaklar",id,{...ortak,tdone,tamam})){closeSheet();toast(pys?"Güncellendi, Arızalı bölümünde":"Yapılacak güncellendi")}
         return}
       const td=segVal(f,"tdurum");
       if(!await save("yapilacaklar",null,{...ortak,tdone:{},tdurum:tids.length?td:"",tamam:false,bitis:""}))return;
       if(td)for(const tid of tids)await save("tahtalar",tid,{durum:td});
       closeSheet();
-      toast(tids.length&&td?"Eklendi, "+tids.length+" tahta "+TAHTA_DURUM[td].toLocaleLowerCase("tr")+" olarak işaretlendi":"Eklendi")};
+      toast(pys?"PYS kaydı eklendi, Arızalı bölümünde":tids.length&&td?"Eklendi, "+tids.length+" tahta "+TAHTA_DURUM[td].toLocaleLowerCase("tr")+" olarak işaretlendi":"Eklendi")};
+  });
+}
+function arizaSheet(id){
+  const x=S.yapilacaklar.find(y=>y.id===id);if(!x)return;
+  const ids=tahtaIds(x);
+  openSheet(`<h3>${esc(x.metin)}</h3><div class="sub">${[okulAd(x.okul),tahtaAdlari(x),x.tur].filter(Boolean).map(esc).join(" · ")}${girilen(x)?" · PYS "+esc(girilen(x)):""}</div>
+   ${x.ayrinti?`<div class="f"><span class="lb">Ayrıntı</span><div style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(x.ayrinti)}</div></div>`:""}
+   <div class="f"><label for="aSonuc">Ne yapıldı</label><textarea id="aSonuc" placeholder="Ör. Anakart değiştirildi, tahta çalışıyor">${esc(x.sonuc||"")}</textarea></div>
+   <div class="btns"><button type="button" class="btn" data-edit>Düzenle</button><button type="button" class="btn" data-x>Vazgeç</button><button class="btn pri" type="submit">Yapıldı</button></div>`,
+  f=>{
+    f.querySelector("[data-edit]").onclick=()=>{closeSheet();todoSheet(id)};
+    f.onsubmit=async e=>{e.preventDefault();
+      const sonuc=f.aSonuc.value.trim();if(!sonuc){f.aSonuc.focus();toast("Ne yapıldığını yaz");return}
+      const tdone=Object.fromEntries(ids.map(i=>[i,today()]));
+      if(!await save("yapilacaklar",x.id,{tamam:true,bitis:today(),tdone,sonuc}))return;
+      const donen=await tamamSonrasi(x,ids);
+      closeSheet();toast("Yapıldı, Yapılanlar'a eklendi"+(donen.length?". "+donen.join(", ")+" tekrar çalışıyor":""))};
   });
 }
 /* ---------- Etiket okuma (seri no) ----------
@@ -910,12 +951,12 @@ function listeVeri(ok,tur,donem){
   const tad=id=>{const t=tahtaById(id);return t?t.sinif:""};
   const rows=[];
   if(tur!=="yapilan"){
-    S.yapilacaklar.filter(x=>x.okul===ok&&!x.tamam).forEach(x=>rows.push({k:"bek",tarih:x.olusturma?new Date(x.olusturma).toISOString().slice(0,10):"",tahta:tahtaAdlari(x),tur:"Yapılacak",aciklama:x.metin+(x.ayrinti?" — "+x.ayrinti:""),durum:"Bekliyor"}));
+    S.yapilacaklar.filter(x=>x.okul===ok&&!x.tamam).forEach(x=>rows.push({k:"bek",tarih:x.olusturma?new Date(x.olusturma).toISOString().slice(0,10):"",tahta:tahtaAdlari(x),tur:x.pys?"Arıza (PYS)":"Yapılacak",aciklama:x.metin+(x.ayrinti?" — "+x.ayrinti:""),durum:x.pys?"PYS açık":"Bekliyor"}));
     S.isler.filter(x=>x.okul===ok&&x.durum!=="tamam").forEach(x=>rows.push({k:"bek",tarih:x.tarih,tahta:tad(x.tahta),tur:x.tur,aciklama:x.aciklama,durum:IS_DURUM[x.durum]}));
   }
   if(tur!=="yapilacak"){
     S.isler.filter(x=>x.okul===ok&&x.durum==="tamam"&&inP(x.tarih)).forEach(x=>rows.push({k:"yap",tarih:x.tarih,tahta:tad(x.tahta),tur:x.tur,aciklama:x.aciklama,durum:"Tamamlandı"}));
-    S.yapilacaklar.filter(x=>x.okul===ok&&x.tamam&&inP(x.bitis)).forEach(x=>rows.push({k:"yap",tarih:x.bitis,tahta:tahtaAdlari(x),tur:"Yapılacak",aciklama:x.metin+(x.ayrinti?" — "+x.ayrinti:""),durum:"Yapıldı"}));
+    S.yapilacaklar.filter(x=>x.okul===ok&&x.tamam&&inP(x.bitis)).forEach(x=>rows.push({k:"yap",tarih:x.bitis,tahta:tahtaAdlari(x),tur:x.pys?"Arıza (PYS)":"Yapılacak",aciklama:x.metin+(x.ayrinti?" — "+x.ayrinti:"")+(x.sonuc?" — Yapılan: "+x.sonuc:""),durum:"Yapıldı"}));
   }
   rows.sort((a,b)=>(a.k===b.k?0:a.k==="bek"?-1:1)||(a.tarih||"").localeCompare(b.tarih||""));
   return rows;
@@ -992,7 +1033,7 @@ $("#mNext").onclick=()=>{const c=today().slice(0,7);if(S.ay<c){S.ay=ayKaydir(S.a
 $("#mLbl").onclick=()=>{S.ay=today().slice(0,7);render()};
 $("#q").addEventListener("input",e=>{S.q=e.target.value;render()});
 $("#fDurum").addEventListener("change",e=>{S.durum=e.target.value;render()});
-$("#fab").onclick=()=>S.tab==="tahtalar"?tahtaSheet(null):S.tab==="yap"?todoSheet(null):isSheet(null);
+$("#fab").onclick=()=>S.tab==="tahtalar"?tahtaSheet(null):S.tab==="yap"?todoSheet(null):S.tab==="ariza"?todoSheet(null,{pys:true}):isSheet(null);
 $("#view").addEventListener("click",async e=>{
   if(e.target.closest("#ilkOkul")){okulSheet();return}
   if(e.target.closest("#ilkBag")){baglantiSheet();return}
@@ -1014,12 +1055,13 @@ $("#view").addEventListener("click",async e=>{
     return}
   const u=e.target.closest("[data-undo]");
   if(u){const pl=u.querySelector(".pill");
-    if(u.dataset.sure){const x=S.yapilacaklar.find(y=>y.id===u.dataset.undo);if(x&&await save("yapilacaklar",x.id,{tamam:false,bitis:"",tdone:{}})){const donen=await geriAl(x,tahtaIds(x));toast("Yapılacaklara geri alındı"+(donen.length?". "+donen.join(", ")+" eski durumuna döndü":""))}}
+    if(u.dataset.sure){const x=S.yapilacaklar.find(y=>y.id===u.dataset.undo);if(x&&await save("yapilacaklar",x.id,{tamam:false,bitis:"",tdone:{}})){const donen=await geriAl(x,tahtaIds(x));toast((x.pys?"Arızalı bölümüne":"Yapılacaklara")+" geri alındı"+(donen.length?". "+donen.join(", ")+" eski durumuna döndü":""))}}
     else{u.dataset.sure=1;pl.textContent="Geri al?";setTimeout(()=>{if(u.isConnected){delete u.dataset.sure;pl.textContent="Tamamlandı"}},3000)}
     return}
   const d=e.target.closest("[data-del]");
   if(d){if(d.dataset.sure){if(await remove("yapilacaklar",d.dataset.del))toast("Not silindi")}else{d.dataset.sure=1;d.textContent="Emin misin?";setTimeout(()=>{if(d.isConnected){delete d.dataset.sure;d.textContent="Sil"}},3000)}return}
   const td=e.target.closest("[data-todo]");if(td){todoSheet(td.dataset.todo);return}
+  const az=e.target.closest("[data-ariza]");if(az){arizaSheet(az.dataset.ariza);return}
   const o=e.target.closest("[data-o]");if(o){okulSec(o.dataset.o);return}
   if(e.target.closest("[data-yapac]")){yapAc();return}
   const g=e.target.closest("[data-go]");if(g){if(g.dataset.tf!==undefined){S.tf=g.dataset.tf;S.gf=g.dataset.gf||""}goTab(g.dataset.go);return}
