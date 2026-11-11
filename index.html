@@ -7,6 +7,7 @@
 <meta name="copyright" content="© Mehmet Karadeniz, 2026-2027. Tüm hakları saklıdır.">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Yegitek Takip</title>
+<script>try{var _t=localStorage.getItem("yegitek-tema");if(_t==="dark"||_t==="light")document.documentElement.setAttribute("data-theme",_t)}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=JetBrains+Mono:wght@500&display=swap">
 <style>
@@ -267,11 +268,12 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.21</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.22</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
         <button class="hb" id="btnAyar" type="button">Ayarlar</button>
+        <button class="hb" id="btnTema" type="button"></button>
       </div>
     </div>
     <div class="okulbar" id="okulBar" role="group" aria-label="Okul seç"></div>
@@ -322,6 +324,12 @@ const AY=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","A
 const TABS=["ozet","isler","yap","ariza","tahtalar"];
 
 const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+
+/* Koyu / normal mod: varsayılan sistemi izler; düğme elle seçer (yegitek-tema) */
+(function(){var b=document.getElementById("btnTema"),r=document.documentElement;
+function koyu(){var t=r.getAttribute("data-theme");return t?t==="dark":window.matchMedia&&matchMedia("(prefers-color-scheme:dark)").matches}
+function ciz(){var k=koyu(),m=k?"Normal moda geç":"Koyu moda geç";b.textContent=k?"☀️":"🌙";b.title=m;b.setAttribute("aria-label",m)}
+b.addEventListener("click",function(){var n=koyu()?"light":"dark";r.setAttribute("data-theme",n);LS.set("yegitek-tema",n);ciz()});ciz()})();
 const S={okullar:[],tahtalar:[],isler:[],yapilacaklar:[],ayarlar:[],okul:"",tab:LS.get("yt2_tab")||"ozet",q:"",tf:"",gf:"",kat:"",durum:"",ay:"",db:null,
   loaded:{okullar:false,tahtalar:false,isler:false,yapilacaklar:false,ayarlar:false}};
 if(!TABS.includes(S.tab))S.tab="ozet";
