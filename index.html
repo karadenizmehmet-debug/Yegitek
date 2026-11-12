@@ -55,6 +55,7 @@ button{font:inherit;color:inherit}
 .hbtns{display:flex;gap:6px}
 .hb{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)}
 .hb:hover{background:var(--sunk)}
+.paylasBtn svg{width:16px;height:16px;display:block;margin:2px 0}
 .sync{display:flex;align-items:center;gap:6px;border:0;background:none;color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;padding:5px 6px;border-radius:6px;white-space:nowrap}
 .sync:hover{background:var(--sunk)}
 .logo h1,.hb{white-space:nowrap}
@@ -157,6 +158,7 @@ h2.sec .lnk{font:600 13px var(--f-body);letter-spacing:0;text-transform:none;col
 .pill.w{--c:var(--warn);--cs:var(--warn-soft)}
 .rz{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .hbtns{flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:420px){.brand{flex-wrap:wrap}.hbtns{flex:1 1 100%}}
 .srow{display:flex;gap:8px}
 .srow input{flex:1;min-width:0}
 .srow .btn{flex:none;white-space:nowrap}
@@ -268,11 +270,12 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.22</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
+      <div class="logo"><i aria-hidden="true"></i><h1>Yegitek <span>Takip</span></h1><small class="ver" title="Sürüm">v1.23</small><button class="sync" id="sync" type="button" data-s="yok"><span>Bağlan</span></button></div>
       <div class="hbtns">
         <button class="hb" id="btnListe" type="button">Liste al</button>
         <button class="hb" id="btnOkullar" type="button">Okullar</button>
         <button class="hb" id="btnAyar" type="button">Ayarlar</button>
+        <button class="hb paylasBtn" type="button"></button>
         <button class="hb" id="btnTema" type="button"></button>
       </div>
     </div>
@@ -1127,5 +1130,28 @@ $("#sync").onclick=baglantiSheet;
 })();
 </script>
 
+<script>
+// Adres paylaş düğmesi: önce sistem paylaşımı, olmazsa adresi panoya kopyalar. Mehmet Karadeniz, 2026-2027
+(function () {
+  var SH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"/></svg>';
+  var OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+  function adres() { return location.href.split(/[?#]/)[0]; }
+  function kopyala(u) {
+    try { var t = document.createElement("textarea"); t.value = u; t.style.cssText = "position:fixed;opacity:0;top:0;left:0"; document.body.appendChild(t); t.select(); var ok = document.execCommand("copy"); document.body.removeChild(t); return ok; } catch (e) { return false; }
+  }
+  function tamam(b) { b.innerHTML = OK; b.title = "Adres kopyalandı"; setTimeout(function () { b.innerHTML = SH; b.title = "Adresi paylaş"; }, 1800); }
+  function paylas(b) {
+    var u = adres();
+    if (navigator.share) { navigator.share({ title: document.title, url: u }).catch(function () {}); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(function () { tamam(b); }, function () { if (kopyala(u)) tamam(b); });
+    else if (kopyala(u)) tamam(b);
+  }
+  var bs = document.querySelectorAll(".paylasBtn");
+  for (var i = 0; i < bs.length; i++) {
+    bs[i].innerHTML = SH; bs[i].title = "Adresi paylaş"; bs[i].setAttribute("aria-label", "Adresi paylaş");
+    bs[i].addEventListener("click", function () { paylas(this); });
+  }
+})();
+</script>
 </body>
 </html>
